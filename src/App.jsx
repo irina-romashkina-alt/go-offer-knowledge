@@ -1008,7 +1008,7 @@ function AIView() {
     var newMsgs = currentMsgs.concat([{ role: "user", content: msg }]);
     setCurrentMsgs(newMsgs);
     setLoading(true);
-    fetch("https://api.anthropic.com/v1/messages", {
+    fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
