@@ -1811,6 +1811,55 @@ const INITIAL_CLIENTS = (function() {
   return ksyusha.map(function(n) { return fmt(n, "Ксюша"); }).concat(sasha.map(function(n) { return fmt(n, "Саша"); }));
 })();
 
+// Supabase client (no npm needed — using REST API directly)
+var SUPABASE_URL = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || "";
+var SUPABASE_KEY = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || "";
+
+async function sbFetch(path, options) {
+  var res = await fetch(SUPABASE_URL + "/rest/v1/" + path, Object.assign({
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation",
+    }
+  }, options));
+  if (!res.ok) return null;
+  var text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function sbLoadClients() {
+  var rows = await sbFetch("clients?order=created_at.asc&select=*");
+  if (!rows || !rows.length) return null;
+  var checkedMap = {}, commentsMap = {};
+  var clients = rows.map(function(r) {
+    Object.assign(checkedMap, r.checked_map || {});
+    Object.assign(commentsMap, r.comments_map || {});
+    return { id: r.id, name: r.name, tariff: r.tariff, curator: r.curator, status: r.status, startDate: r.start_date, notes: r.notes || "" };
+  });
+  return { clients, checkedMap, commentsMap };
+}
+
+async function sbSaveClient(client, checkedMap, commentsMap) {
+  var clientChecked = {}, clientComments = {};
+  Object.keys(checkedMap).forEach(function(k) { if (k.startsWith(client.id + "_")) clientChecked[k] = checkedMap[k]; });
+  Object.keys(commentsMap).forEach(function(k) { if (k.startsWith(client.id + "_")) clientComments[k] = commentsMap[k]; });
+  await sbFetch("clients?id=eq." + encodeURIComponent(client.id), {
+    method: "PUT",
+    body: JSON.stringify({
+      id: client.id, name: client.name, tariff: client.tariff,
+      curator: client.curator, status: client.status,
+      start_date: client.startDate, notes: client.notes || "",
+      checked_map: clientChecked, comments_map: clientComments,
+    })
+  });
+}
+
+async function sbDeleteClient(id) {
+  await sbFetch("clients?id=eq." + encodeURIComponent(id), { method: "DELETE" });
+}
+
 // Accounts allowed to edit clients data
 const EDITORS = [
   "irina-romashkina@go-offer.us",
@@ -1821,29 +1870,12 @@ const EDITORS = [
 function ClientsView({ currentUser }) {
   var canEdit = currentUser && EDITORS.indexOf(currentUser.email.toLowerCase()) >= 0;
 
-  const [clients, setClients]     = useState(function() {
-    try {
-      var saved = localStorage.getItem("go_offer_clients");
-      if (saved) return JSON.parse(saved);
-    } catch(e) {}
-    return INITIAL_CLIENTS;
-  });
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd]     = useState(false);
   const [selected, setSelected]   = useState(null);
-  const [checkedMap, setCheckedMap] = useState(function() {
-    try {
-      var saved = localStorage.getItem("go_offer_checked");
-      if (saved) return JSON.parse(saved);
-    } catch(e) {}
-    return {};
-  });
-  const [commentsMap, setCommentsMap] = useState(function() {
-    try {
-      var saved = localStorage.getItem("go_offer_comments");
-      if (saved) return JSON.parse(saved);
-    } catch(e) {}
-    return {};
-  });
+  const [checkedMap, setCheckedMap] = useState({});
+  const [commentsMap, setCommentsMap] = useState({});
   const [editingComment, setEditingComment] = useState(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [hoveredPhase, setHoveredPhase] = useState(null);
@@ -1859,19 +1891,26 @@ function ClientsView({ currentUser }) {
   const [filterStatus, setFilterStatus] = useState("Все");
   const [filterTariff, setFilterTariff] = useState("Все");
   const [filterDays, setFilterDays] = useState("Все");
-  const [openStatusMenu, setOpenStatusMenu] = useState(null); // clientId with open dropdown
+  const [openStatusMenu, setOpenStatusMenu] = useState(null);
   const [search, setSearch] = useState("");
 
-  // Persist to localStorage on changes
+  // Load from Supabase on mount
   useEffect(function() {
-    try { localStorage.setItem("go_offer_clients", JSON.stringify(clients)); } catch(e) {}
-  }, [clients]);
-  useEffect(function() {
-    try { localStorage.setItem("go_offer_checked", JSON.stringify(checkedMap)); } catch(e) {}
-  }, [checkedMap]);
-  useEffect(function() {
-    try { localStorage.setItem("go_offer_comments", JSON.stringify(commentsMap)); } catch(e) {}
-  }, [commentsMap]);
+    sbLoadClients().then(function(data) {
+      if (data) {
+        setClients(data.clients);
+        setCheckedMap(data.checkedMap);
+        setCommentsMap(data.commentsMap);
+      } else {
+        // fallback: load INITIAL_CLIENTS into Supabase
+        var promises = INITIAL_CLIENTS.map(function(c) { return sbSaveClient(c, {}, {}); });
+        Promise.all(promises).then(function() {
+          setClients(INITIAL_CLIENTS);
+        });
+      }
+      setLoading(false);
+    }).catch(function() { setLoading(false); });
+  }, []);
 
   var tariffColors = {
     "take-all": "#A78BFA", "take-all-plus": "#F472B6", "vip": "#FBBF24",
@@ -1880,27 +1919,31 @@ function ClientsView({ currentUser }) {
 
   function addClient() {
     if (!form.name.trim()) return;
-    var id = "c" + Date.now();
-    setClients(function(p) {
-      return p.concat([{
-        id: id, name: form.name.trim(), tariff: form.tariff,
-        curator: form.curator, startDate: form.startDate,
-        status: form.status,
-        notes: form.notes, added: new Date().toLocaleDateString("ru-RU"),
-      }]);
-    });
+    var newClient = {
+      id: "c" + Date.now(), name: form.name.trim(), tariff: form.tariff,
+      curator: form.curator, startDate: form.startDate,
+      status: form.status, notes: form.notes,
+    };
+    sbSaveClient(newClient, {}, {});
+    setClients(function(p) { return p.concat([newClient]); });
     setForm({ name: "", tariff: "take-all", curator: currentUser ? currentUser.name : "Ксюша", startDate: new Date().toISOString().slice(0, 10), status: "strategy", notes: "" });
     setShowAdd(false);
   }
 
   function removeClient(id) {
+    sbDeleteClient(id);
     setClients(function(p) { return p.filter(function(c) { return c.id !== id; }); });
     if (selected && selected.id === id) setSelected(null);
   }
 
   function toggleCheck(clientId, itemId) {
     var key = clientId + "_" + itemId;
-    setCheckedMap(function(p) { var n = Object.assign({}, p); n[key] = !p[key]; return n; });
+    setCheckedMap(function(p) {
+      var n = Object.assign({}, p); n[key] = !p[key];
+      var client = clients.find(function(c) { return c.id === clientId; });
+      if (client) setTimeout(function() { sbSaveClient(client, n, commentsMap); }, 300);
+      return n;
+    });
   }
 
   function togglePhaseAll(clientId, phaseKey) {
@@ -1912,13 +1955,21 @@ function ClientsView({ currentUser }) {
     setCheckedMap(function(p) {
       var n = Object.assign({}, p);
       items.forEach(function(it) { n[clientId + "_" + it.id] = !allDone; });
+      var client = clients.find(function(c) { return c.id === clientId; });
+      if (client) setTimeout(function() { sbSaveClient(client, n, commentsMap); }, 300);
       return n;
     });
   }
 
   function saveComment(clientId, itemId) {
     var key = clientId + "_" + itemId;
-    setCommentsMap(function(p) { var n = Object.assign({}, p); if (commentDraft.trim()) { n[key] = commentDraft.trim(); } else { delete n[key]; } return n; });
+    setCommentsMap(function(p) {
+      var n = Object.assign({}, p);
+      if (commentDraft.trim()) { n[key] = commentDraft.trim(); } else { delete n[key]; }
+      var client = clients.find(function(c) { return c.id === clientId; });
+      if (client) setTimeout(function() { sbSaveClient(client, checkedMap, n); }, 300);
+      return n;
+    });
     setEditingComment(null);
     setCommentDraft("");
   }
@@ -1945,7 +1996,10 @@ function ClientsView({ currentUser }) {
 
   function updateStatus(clientId, newStatus) {
     setClients(function(p) {
-      return p.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: newStatus }) : c; });
+      var updated = p.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: newStatus }) : c; });
+      var client = updated.find(function(c) { return c.id === clientId; });
+      if (client) sbSaveClient(client, checkedMap, commentsMap);
+      return updated;
     });
     if (selected && selected.id === clientId) {
       setSelected(function(s) { return Object.assign({}, s, { status: newStatus }); });
@@ -1959,6 +2013,15 @@ function ClientsView({ currentUser }) {
     document.addEventListener("click", handleClick);
     return function() { document.removeEventListener("click", handleClick); };
   }, [openStatusMenu]);
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, gap: 12 }}>
+        <div style={{ width: 20, height: 20, border: "2px solid rgba(167,139,250,0.3)", borderTop: "2px solid #A78BFA", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Загружаем клиентов...</span>
+      </div>
+    );
+  }
 
   var allCurators = ["Все"].concat(CURATORS);
   var filtered = clients.filter(function(c) {
