@@ -1857,6 +1857,9 @@ function ClientsView({ currentUser }) {
   });
   const [filterCurator, setFilterCurator] = useState("Все");
   const [filterStatus, setFilterStatus] = useState("Все");
+  const [filterTariff, setFilterTariff] = useState("Все");
+  const [filterDays, setFilterDays] = useState("Все");
+  const [openStatusMenu, setOpenStatusMenu] = useState(null); // clientId with open dropdown
   const [search, setSearch] = useState("");
 
   // Persist to localStorage on changes
@@ -1949,12 +1952,27 @@ function ClientsView({ currentUser }) {
     }
   }
 
+  // Close status dropdown on outside click
+  useEffect(function() {
+    if (!openStatusMenu) return;
+    function handleClick() { setOpenStatusMenu(null); }
+    document.addEventListener("click", handleClick);
+    return function() { document.removeEventListener("click", handleClick); };
+  }, [openStatusMenu]);
+
   var allCurators = ["Все"].concat(CURATORS);
   var filtered = clients.filter(function(c) {
     var curOk = filterCurator === "Все" || c.curator === filterCurator;
     var stOk  = filterStatus === "Все" || c.status === filterStatus;
+    var tarOk = filterTariff === "Все" || c.tariff === filterTariff;
+    var daysLeft = 180 - daysSinceStart(c);
+    var daysOk = filterDays === "Все" ||
+      (filterDays === "urgent" && daysLeft <= 14 && daysLeft > 0) ||
+      (filterDays === "warning" && daysLeft > 14 && daysLeft <= 30) ||
+      (filterDays === "ok" && daysLeft > 30) ||
+      (filterDays === "over" && daysLeft <= 0);
     var searchOk = search === "" || c.name.toLowerCase().indexOf(search.toLowerCase()) >= 0;
-    return curOk && stOk && searchOk;
+    return curOk && stOk && tarOk && daysOk && searchOk;
   });
 
   // ── Detail view (Gantt + checklist) ──────────────────────────────────────
@@ -2380,6 +2398,29 @@ function ClientsView({ currentUser }) {
           style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
           {allCurators.map(function(c) { return <option key={c} value={c}>{c === "Все" ? "Все кураторы" : "👤 " + c}</option>; })}
         </select>
+        <select value={filterTariff} onChange={function(e) { setFilterTariff(e.target.value); }}
+          style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
+          <option value="Все">Все тарифы</option>
+          <option value="take-all">Take All</option>
+          <option value="take-all-plus">Take All+</option>
+          <option value="vip">VIP</option>
+          <option value="comeback-lite">Comeback Lite</option>
+          <option value="comeback-pro">Comeback Pro</option>
+        </select>
+        <select value={filterDays} onChange={function(e) { setFilterDays(e.target.value); }}
+          style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
+          <option value="Все">Все сроки</option>
+          <option value="urgent">🔴 Критично (до 14 дн.)</option>
+          <option value="warning">⚠️ Скоро (до 30 дн.)</option>
+          <option value="ok">✅ В норме (30+ дн.)</option>
+          <option value="over">🏁 Завершена</option>
+        </select>
+        {(filterCurator !== "Все" || filterStatus !== "Все" || filterTariff !== "Все" || filterDays !== "Все" || search !== "") ? (
+          <button onClick={function() { setFilterCurator("Все"); setFilterStatus("Все"); setFilterTariff("Все"); setFilterDays("Все"); setSearch(""); }}
+            style={{ fontSize: 12, color: "#F87171", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 9, padding: "8px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>
+            ✕ Сбросить всё
+          </button>
+        ) : null}
       </div>
 
       {/* Empty state */}
@@ -2403,7 +2444,7 @@ function ClientsView({ currentUser }) {
 
             return (
               <div key={client.id}
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid " + tarColor + "22", borderRadius: 14, padding: "0", overflow: "hidden", cursor: "pointer", transition: "all 0.15s" }}
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid " + tarColor + "22", borderRadius: 14, padding: "0", cursor: "pointer", transition: "all 0.15s", position: "relative" }}
                 onMouseEnter={function(e) { e.currentTarget.style.borderColor = tarColor + "55"; }}
                 onMouseLeave={function(e) { e.currentTarget.style.borderColor = tarColor + "22"; }}
                 onClick={function() { setSelected(client); setActivePhase(null); }}>
@@ -2411,7 +2452,7 @@ function ClientsView({ currentUser }) {
                 {/* Status bar on top */}
                 {(function() {
                   var st = STATUS_STAGES.find(function(s) { return s.id === client.status; }) || STATUS_STAGES[0];
-                  return <div style={{ height: 3, background: "linear-gradient(90deg," + st.color + "," + st.color + "44)" }} />;
+                  return <div style={{ height: 3, background: "linear-gradient(90deg," + st.color + "," + st.color + "44)", borderRadius: "14px 14px 0 0" }} />;
                 })()}
 
                 {/* Top row */}
@@ -2424,7 +2465,35 @@ function ClientsView({ currentUser }) {
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>👤 {client.curator}</span>
                       {(function() {
                         var st = STATUS_STAGES.find(function(s) { return s.id === client.status; }) || STATUS_STAGES[0];
-                        return <span style={{ fontSize: 11, color: st.color, background: st.color + "15", border: "1px solid " + st.color + "30", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{st.icon} {st.label}</span>;
+                        var isOpen = openStatusMenu === client.id;
+                        return (
+                          <div style={{ position: "relative" }}>
+                            <span
+                              onClick={function(e) { e.stopPropagation(); setOpenStatusMenu(isOpen ? null : client.id); }}
+                              style={{ fontSize: 11, color: st.color, background: st.color + "15", border: "1px solid " + st.color + "30", padding: "2px 8px", borderRadius: 20, fontWeight: 600, cursor: "pointer", userSelect: "none" }}>
+                              {st.icon} {st.label} ▾
+                            </span>
+                            {isOpen ? (
+                              <div
+                                onClick={function(e) { e.stopPropagation(); }}
+                                style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 100, background: "#1a1535", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, overflow: "hidden", minWidth: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.6)", whiteSpace: "nowrap" }}>
+                                {STATUS_STAGES.map(function(s) {
+                                  var isActive = client.status === s.id;
+                                  return (
+                                    <div key={s.id}
+                                      onClick={function() { updateStatus(client.id, s.id); setOpenStatusMenu(null); }}
+                                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 13px", cursor: "pointer", background: isActive ? s.color + "18" : "transparent", borderLeft: isActive ? "2px solid " + s.color : "2px solid transparent" }}
+                                      onMouseEnter={function(e) { if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                                      onMouseLeave={function(e) { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
+                                      <span style={{ fontSize: 13 }}>{s.icon}</span>
+                                      <span style={{ fontSize: 12, color: isActive ? s.color : "rgba(255,255,255,0.65)", fontWeight: isActive ? 700 : 400 }}>{s.label}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
                       })()}
                     </div>
                   </div>
