@@ -1,100 +1,62 @@
 import { useState, useRef, useEffect } from "react";
 
-const SYSTEM_PROMPT_MESSAGES = `Ты помощник куратора Go Offer. Пишешь готовые сообщения для отправки менти — живым, тёплым языком, без канцелярита.
+const SYSTEM_PROMPT_MESSAGES = `Ты помощник куратора Go Offer. Пишешь готовые сообщения для отправки менти.
 
-Тон и стиль:
-- Всегда используй заглушку [Имя] вместо имени
-- Пиши как живой человек: короткие предложения, активные глаголы, без шаблонов вроде «Я понимаю ваши опасения»
-- В конце каждого сообщения — конкретный следующий шаг
-- Не объясняй что ты делаешь, просто напиши само сообщение
-- Тон: тёплый, уверенный, поддерживающий
+ГЛАВНОЕ ПРАВИЛО — ВСЕГДА давай 3 варианта сообщения. Каждый вариант — под разную ситуацию или тональность. Оформляй так:
 
-Договорная база (опирайся на неё при ответах):
+Вариант 1 — [короткое название тональности]
+[текст сообщения]
 
-ТАРИФЫ И СРОКИ:
-- Take All ($2,850, 6 мес) — резюме, LinkedIn-ревью, 1 созвон, Easy Apply Bot 6 мес, аутрич 1 мес, 1 чекап, 2 мока ИЛИ 300 подач ассистентом. Комиссия 4% от годовой зарплаты.
-- Take All+ ($4,950, 6 мес) — всё выше + Long Apply Bot, 4 мока, 3 созвона, ассистент 1500–2500 подач, аутрич 2 мес, фоллуап 2 мес, 3 чекапа. Комиссия 5%.
-- VIP ($7,750, 6 мес) — всё выше + LinkedIn силами команды, 6 моков, 6 созвонов с ментором, ассистент 2500–5000 подач, аутрич 4 мес, фоллуап 4 мес, 6 чекапов, чат навсегда. Комиссия 6%.
+Вариант 2 — [короткое название тональности]
+[текст сообщения]
 
-ПАУЗЫ (Section 5.1):
-- Пауза — до 4 недель, оформляется через Official Freeze Form
-- Устные просьбы в Telegram/WhatsApp юридически не имеют силы
-- Срок договора продлевается на время паузы
-- Комиссия за оффер во время паузы всё равно применяется
+Вариант 3 — [короткое название тональности]
+[текст сообщения]
 
-ФИДБЭК И ПРИНЯТИЕ (Section 1.5):
-- Если клиент не дал фидбэк по deliverable в течение 5 рабочих дней — услуга считается принятой и выполненной
-- 72-часовое правило в Hub: непроверенные заявки автоматически считаются одобренными
+Правила письма:
+- Используй [Имя] вместо имени
+- Пиши как живой человек: коротко, по делу, без воды
+- Никаких канцелярских оборотов: «Я понимаю», «Хочу сообщить», «В связи с»
+- Никаких слов сожаления и извинений: не пиши «к сожалению», «жаль», «извини», «к несчастью», «увы»
+- Вместо «к сожалению не могу» → просто скажи как есть: «сейчас это невозможно» или предложи альтернативу
+- В конце каждого варианта — конкретный следующий шаг
+- Без вступлений и объяснений — сразу три варианта
 
-SUCCESS FEE (Section 3):
-- Применяется к ЛЮБОМУ офферу в профессиональной области, полученному за время программы — даже если нашёл сам
-- Хвостовой период: 3 месяца после окончания договора, если интервью началось в активный период
-- Уведомить письменно в течение 5 календарных дней после получения оффера
-- Скрытие оффера → немедленная выплата + 25% наценка + судебные издержки
-- Защита 90 дней: если уволили не по вине клиента в первые 90 дней — пропорциональный возврат Success Fee
+Тон: тёплый, уверенный, человеческий. Как пишет живой куратор коллеге-клиенту.
 
-ВОЗВРАТЫ (Addendum 1):
-- Невозвратный setup fee: $1,600
-- Формула: Возврат = Оплачено − $1,600 − стоимость использованных услуг
-- Если сумма отрицательная — возврат $0
-- Чарджбэк до завершения медиации (15 рабочих дней) — нарушение договора
+Договорная база (используй при необходимости, не цитируй дословно):
+Тарифы: Take All ($2,850, 4%), Take All+ ($4,950, 5%), VIP ($7,750, 6%). Success Fee — от любого оффера в профсфере за период программы. Паузы — только через Official Freeze Form. Возврат = Оплачено − $1,600 − использованные услуги. MBG только при полной оплате upfront. Уведомить об оффере письменно в течение 5 дней.`;
 
-ГАРАНТИЯ (MBG, Addendum 2):
-- Только при полной оплате upfront или через одобренное финансирование (рассрочка не считается)
-- Требования: онбординг, ≤2 пропуска сессий (с уведомлением за 24ч), ответы в течение 3 рабочих дней, 6+ вебинаров, 15+ интервью на ревью, 1500–2500 ручных заявок (Take All)
-- Срок подачи: между 9-м и 12-м месяцем от старта
-- Гарантия аннулируется при получении оффера, нарушении NDA или форс-мажоре
+const SYSTEM_PROMPT_WARMUP = `Ты помощник куратора Go Offer. Помогаешь прогреть клиента к оплате или решению.
 
-НАРУШЕНИЯ И ИНФРАКЦИИ (Section 4.3):
-- Минорные (пропуск созвона без 24ч предупреждения, нет ответа 4 рабочих дня) — до 3 штук до эскалации
-- Мажорные (игнор 14+ дней, грубость, отказ следовать плану) — заморозка аккаунта, при отсутствии исправления за 7 дней — расторжение
+ГЛАВНОЕ ПРАВИЛО — ВСЕГДА давай 3 варианта сообщения с разным углом подачи. Оформляй так:
 
-КОНФИДЕНЦИАЛЬНОСТЬ (Section 6):
-- Запрещено делиться материалами, скриптами, доступами, скринами переписки с менторами
-- Случайное нарушение: 48ч на удаление. Намеренное: расторжение без возврата + $1,000 за инцидент
-- NDA действует 5 лет после окончания программы
+Вариант 1 — [короткое название]
+[текст]
 
-При ответах: говори по-человечески, не цитируй договор дословно. Используй юридическую базу как основу — но передавай тепло и заботу.`;
+Вариант 2 — [короткое название]
+[текст]
 
-const SYSTEM_PROMPT_WARMUP = `Ты помощник куратора Go Offer. Помогаешь мягко подготовить клиента к оплате или принятию решения.
+Вариант 3 — [короткое название]
+[текст]
 
-Тон и стиль:
-- Используй [Имя] как заглушку
-- Пиши как живой человек — без шаблонов и канцелярита
-- Никакого давления, только забота и факты
-- В конце — лёгкий следующий шаг или вопрос
+Правила письма:
+- Используй [Имя] вместо имени
+- Пиши как живой человек — коротко, тепло, без давления
+- Никакого канцелярита: «Хочу обратить ваше внимание», «В связи с вышесказанным»
+- Никаких слов сожаления: не пиши «к сожалению», «жаль», «увы», «к несчастью»
+- Если нужно отказать или объяснить ограничение — говори прямо и предлагай альтернативу
+- В конце — лёгкий следующий шаг или вопрос без давления
+- Без вступлений — сразу три варианта
 
-Твои задачи:
-- Написать сообщение, которое снимает возражения и помогает клиенту принять решение
-- Напоминать о ценности программы через конкретные результаты других клиентов
-- Работать с сомнениями без давления — через вопросы и факты
-- Создавать мягкий дедлайн или ощущение упущенной возможности (честно, без манипуляций)
+Что можно говорить:
+- Take All $2,850 (4%), Take All+ $4,950 (5%), VIP $7,750 (6%)
+- Рассрочка до 3 мес (1-й и 2-й платёж минимум 30%)
+- MBG-гарантия только при полной оплате upfront
+- Не обещать конкретные сроки оффера и не гарантировать трудоустройство
 
-Что можно говорить о программе (опирайся на реальные условия):
+Тон: как пишет живой человек другу — заботливо, без манипуляций, с верой в результат.`;
 
-ТАРИФЫ:
-- Take All: $2,850 — резюме, Easy Apply Bot 6 мес, аутрич 1 мес, 2 мока. Комиссия 4% при оффере.
-- Take All+: $4,950 — всё + Long Apply Bot, ассистент до 2500 подач, фоллуапы 2 мес, 4 мока. Комиссия 5%.
-- VIP: $7,750 — максимальная поддержка, LinkedIn силами команды, ассистент до 5000 подач, 6 моков, чат навсегда. Комиссия 6%.
-
-ОПЛАТА (Section 2.2):
-- Опция А: полная оплата в течение 1 дня
-- Опция Б: рассрочка до 3 месяцев (1-й и 2-й платёж — минимум 30% каждый)
-- Только полная оплата upfront даёт право на MBG (Гарантию возврата)
-
-ГАРАНТИЯ ВОЗВРАТА (MBG, Addendum 2):
-- Полный возврат base fee (минус $1,600 setup) если за 9 месяцев не пришёл оффер
-- Условия: всё делать добросовестно, посещать вебинары, проходить моки, не пропадать
-- Срок подачи заявки: от 9 до 12 месяцев от старта
-- Это честная гарантия — мы верим в результат
-
-ЧТО ТОЧНО НЕ ГОВОРИТЬ:
-- ❌ «Гарантируем оффер» — провайдер работает в advisory capacity, гарантий трудоустройства нет
-- ❌ Называть точные суммы устно без документа
-- ❌ «Это мы виноваты» при любых ситуациях
-- ❌ Обещать конкретные сроки трудоустройства
-
-Говори по-человечески, без юридических формулировок. Помогай клиенту увидеть ценность — через факты, не давление.`;
 
 const TARIFFS = [
   {
@@ -237,27 +199,8 @@ const DOCS = [
     sections: [
       { h: "Основные принципы", c: "1. Договор — наша опора\n2. Goodwill — только наша инициатива\n3. Документация обязательна\n4. Никаких чарджбэков без медиации\n5. Никакого давления и агрессии" },
       { h: "Шаги при запросе", c: "1. Зафиксировать письменно → support@go-offer.us\n2. Подтвердить получение за 48 часов\n3. Собрать досье\n4. Breakdown: Eligible = Paid - 1600 USD - стоимость услуг\n5. Все фиксировать в CRM" },
-      { h: "Формула возврата (Addendum 1)", c: "Возврат = Оплачено − $1,600 (setup fee) − стоимость использованных услуг\n\nЦены услуг:\n• Стратсессия: $200\n• Создание резюме: $300 (Take All/All+) / $500 (VIP)\n• LinkedIn: $250 (Take All/All+) / $500 (VIP)\n• Автоматизация подач: $250/мес\n• Аутрич LinkedIn: $150/мес\n• Подготовка к интервью: $300\n• Образовательные модули: $200/шт\n• Мок-интервью: $50/сессия\n• Созвоны с ментором: $100/созвон\n• Ассистент на подачи: $850 за 1500 заявок (пропорционально)\n• Фоллупер: $400/мес\n• Аутрич-специалист: $150/мес\n\nЕсли итог отрицательный — возврат $0." },
       { h: "Уровни эскалации", c: "1. Менеджер — goodwill до 300 USD\n2. Head of Support — до 1000 USD\n3. Legal — чарджбэки, угрозы\n4. Founder — прецедентные кейсы\n\nПри угрозе чарджбэка → Legal в течение 4 часов." },
-      { h: "Когда возврат невозможен", c: "❌ Прошло 6 месяцев программы\n❌ Все услуги были предоставлены, но клиент ими не воспользовался\n❌ Расторжение за намеренное нарушение NDA\n❌ Клиент получил оффер (услуга выполнена)\n\n⚠️ Услуга считается использованной, если клиент не дал фидбэк в течение 5 рабочих дней (Section 1.5 договора)." },
-      { h: "Защита при увольнении (90 дней)", c: "Если клиента уволили не по его вине в первые 90 дней после начала работы:\n→ Success Fee возвращается пропорционально неотработанному сроку\n\nУсловия:\n• Увольнение не за нарушение / не по собственному желанию\n• Подать заявку в течение 14 дней с документами\n\nЭто честная защита — мы за клиента." },
-      { h: "Чарджбэк и медиация", c: "По договору (Section 9.2): клиент не вправе инициировать чарджбэк до завершения обязательной медиации.\n\nПорядок медиации:\n1. Клиент направляет уведомление письменно\n2. У нас 15 рабочих дней на ответ\n3. Только после этого — арбитраж\n\nПреждевременный чарджбэк = нарушение договора.\nПри угрозе → сразу в Legal (в течение 4 часов)." },
       { h: "Запрещено говорить", c: "❌ Гарантируем работу или оффер\n❌ Это мы виноваты\n❌ Уберите отзыв — добавим денег\n❌ Называть суммы устно\n❌ Наш юрист сказал" },
-    ]
-  },
-  {
-    id: "contract", title: "Договор и условия", icon: "doc", role: "Куратор", color: "#A78BFA",
-    sections: [
-      { h: "Основа договора", c: "Договор действует с момента доступа клиента к платформе.\n\nID конверта DocuSign: A0500E3B-D969-481D-BD09-02A5B6410116\n\nСтороны:\n• Go Offer Inc — провайдер (190 W 54TH St, Bayonne, NJ, 07002)\n• Клиент — физическое лицо\n\nДополняет Terms & Conditions на go-offer.us/terms\nПрименимое право: штат Нью-Джерси." },
-      { h: "Тарифы и что входит", c: "TAKE ALL ($2,850 | комиссия 4% | 6 мес):\nДоступ к Hub, AXL, Notion, резюме, LinkedIn-ревью, 1 стратсозвон, Easy Apply Bot 6 мес, аутрич 1 мес, 1 чекап. Выбор: 2 мока ИЛИ 300 подач ассистентом.\n\nTAKE ALL+ ($4,950 | комиссия 5% | 6 мес):\nВсё выше + Long Apply Bot, 4 мока, 3 созвона, ассистент 1500–2500 подач, аутрич 2 мес (5/2, мин 1000 действий), фоллупер 2 мес (5/2), 1 смена стратегии.\n\nVIP ($7,750 | комиссия 6% | 6 мес):\nВсё выше + LinkedIn силами команды, 6 моков, 6 созвонов с ментором, ассистент 2500–5000 подач, аутрич 4 мес (5/2), фоллупер 4 мес (5/2)." },
-      { h: "Оплата и рассрочка (Section 2)", c: "Опция А: полная оплата в течение 1 календарного дня.\nОпция Б: рассрочка до 3 месяцев — 1-й и 2-й платёж минимум 30% каждый.\n\nПросрочка платежа:\n• 5 рабочих дней → дефолт: штраф 5%, заморозка доступа\n• 15 дней → отмена рассрочки, требование полного баланса\n• 30 дней → существенное нарушение договора\n\nSetup fee $1,600 невозвратный — входит в стоимость любого тарифа.\n\n⚠️ Только полная оплата upfront даёт право на MBG-гарантию." },
-      { h: "Success Fee — кому и когда", c: "Success Fee платится при ЛЮБОМ оффере в профессиональной сфере за активный период программы — даже если клиент нашёл его сам.\n\nПроцент от годовой gross base salary (без бонусов и equity):\n• Почасовая ставка × 2080 часов\n\nДедлайн оплаты: 30 дней с даты официального начала работы.\n\nХвостовой период — 3 месяца после окончания договора:\n→ применяется, если интервью началось в активный период\n\nИсключение из хвостового периода:\n→ интервью началось ДО программы + клиент уведомил письменно в первые 3 дня + оффер пришёл в первые 3 месяца\n\nОбязанность клиента: уведомить письменно в течение 5 календарных дней после получения / принятия / начала работы." },
-      { h: "Скрытие оффера — последствия", c: "Если клиент скрыл оффер, исказил статус или игнорирует запросы верификации:\n\n• Success Fee выплачивается немедленно в полном объёме\n• Пени 1,5% в месяц с даты начала работы\n• Клиент оплачивает все судебные издержки и услуги юристов\n• По онбординг-форме: +25% наценка к Success Fee\n\nВерификация через The Work Number / HRIS запускается только если клиент не отвечает 14+ дней или не предоставляет данные об обнаруженной работе в течение 7 дней.\n\n⚠️ Мы никогда не выходим на hiring managers во вред клиенту." },
-      { h: "Паузы в программе (Section 5)", c: "Стандартная пауза: до 4 недель.\nПродлённая пауза: только по письменному соглашению.\n\nКак оформить:\n→ Только через Official Freeze Form\n→ Устные просьбы в Telegram/WhatsApp юридической силы не имеют\n\nЧто происходит:\n• Активные сервисы ставятся на паузу\n• Срок договора продлевается на время паузы\n• Success Fee за оффер во время паузы всё равно применяется\n\nФорс-мажор и нестандартные ситуации — письменное соглашение." },
-      { h: "Поведение и инфракции (Section 4)", c: "Минорные нарушения (до 3 штук):\n• Пропуск созвона без предупреждения за 24ч\n• Нет ответа 4 рабочих дня\n\nМажорные нарушения:\n• Игнор 14+ календарных дней\n• Грубость, агрессия\n• Отказ следовать плану поиска\n\nПри мажорном:\n→ Заморозка аккаунта\n→ 7 дней на исправление\n→ Иначе — расторжение\n\nАпелляция: 15 рабочих дней, мы отвечаем за 10.\n\nЭскалация к фаундерам — только через официальный спор (Section 9.2), не напрямую." },
-      { h: "Конфиденциальность NDA (Section 6)", c: "Что запрещено:\n❌ Делиться доступами, материалами AXL, Notion, скриптами\n❌ Скриншоты переписки с менторами в соцсетях\n❌ Использовать комьюнити в коммерческих целях\n❌ Копировать контент и шаблоны\n\nПоследствия:\n• Случайное: 48 часов на удаление\n• Намеренное: расторжение без возврата + $1,000 за каждый инцидент + реальный ущерб + юристы\n\nНDA действует 5 лет после окончания программы.\n\nAnti-disparagement (Addendum 3): публичные негативные высказывания → потеря права на возврат + liquidated damages." },
-      { h: "Гарантия возврата MBG (Addendum 2)", c: "Кто может получить:\n✅ Только при полной оплате upfront (рассрочка не подходит)\n✅ Нужна действующая US work authorization (Visa, GC, EAD)\n\nЧто надо сделать:\n• Онбординг вовремя\n• Не пропускать сессии более 2 раз (предупреждение за 24ч)\n• Отвечать в течение 3 рабочих дней\n• Посетить 6+ вебинаров (или саммари за 7 дней)\n• Загрузить 15+ интервью на ревью\n• Take All: 1500–2500 ручных заявок\n\nКогда подавать: между 9-м и 12-м месяцем от старта.\nВозврат: вся оплаченная сумма минус $1,600 setup fee.\n\nМGB аннулируется если получен оффер, нарушен NDA, или есть форс-мажор в отрасли." },
-      { h: "Инфраструктура и данные (Section 7)", c: "Профессиональный email и номер телефона:\n• Административные права остаются у Go Offer\n• Клиент использует только для поиска работы\n• Доступ сохраняется на 3 месяца после окончания программы для завершения интервью\n\nAPI-интеграции (Unipile / LinkedIn):\n• Клиент даёт явное согласие на подключение\n• Провайдер не несёт ответственности за ограничения и баны со стороны LinkedIn\n• Клиент сам несёт ответственность за соблюдение правил LinkedIn ToS\n\nДанные хранятся 12 месяцев после окончания программы (финансовые — дольше по закону).\n\nАнонимизированные метрики могут использоваться в маркетинге. Отказ — в письменном виде в течение 48ч после подписания." },
     ]
   },
   {
@@ -277,31 +220,78 @@ const DOCS = [
 ];
 
 const COMPANY_INFO = {
-  mission: "Go Offer помогает специалистам находить работу в США — быстро, системно, с результатом. Мы не просто рассылаем резюме: мы строим стратегию, автоматизируем поиск и сопровождаем клиента до оффера.",
+  mission: "Мы помогаем талантливым иммигрантам из Восточной Европы улучшить и автоматизировать поиск работы в США. Мы верим, что опыт и квалификация наших менти не должны обнуляться только потому, что они переехали на другой континент.",
 
   values: [
-    { icon: "🎯", title: "Результат", desc: "Мы работаем на оффер, а не на процесс. Каждое решение измеряется конечным результатом клиента." },
-    { icon: "⚡", title: "Скорость", desc: "Быстрый первый ответ, быстрое резюме, быстрый старт подач. Время клиента — наш главный ресурс." },
-    { icon: "🤝", title: "Честность", desc: "Говорим правду: о рынке, о шансах, о сроках. Никаких ложных обещаний и гарантий оффера." },
+    { icon: "🎯", title: "Доказанная эффективность", desc: "Наш подход основан на реальном опыте фаундеров и многих успешных кейсов." },
+    { icon: "⚡", title: "Технологичность", desc: "Используем AI и автоматизацию там, где это ускоряет процесс." },
+    { icon: "💜", title: "Человеческая поддержка", desc: "Понимаем эмоциональные американские горки при поиске работы и поддерживаем клиентов." },
+    { icon: "🤝", title: "Комьюнити", desc: "Объединяем людей со схожими целями и создаём среду взаимной поддержки." },
     { icon: "🔧", title: "Системность", desc: "Чёткий процесс, прозрачные шаги, понятные метрики. Хаос — враг результата." },
-    { icon: "💜", title: "Забота", desc: "Мы за клиента, не против него. Поддержка в трудные моменты — часть нашей работы." },
-    { icon: "🚀", title: "Инновации", desc: "Боты, CRM, AI — используем лучшие инструменты. Не ждём, пока рынок изменится, меняемся первыми." },
+    { icon: "🚀", title: "Честность", desc: "Говорим правду: о рынке, о шансах, о сроках. Никаких ложных обещаний." },
   ],
+
+  founders: [
+    {
+      name: "Анна Гордеева",
+      role: "Co-founder",
+      icon: "👩‍💻",
+      color: "#F472B6",
+      facts: [
+        "10 лет карьеры дата-аналитиком в Яндексе и TikTok",
+        "После переезда в Бостон сделала 3 200 аппликаций за 6 недель",
+        "Получила 3 оффера — выбрала Klaviyo",
+        "Её опыт стал фундаментом методологии Go Offer",
+      ]
+    },
+    {
+      name: "Кирилл Гугаев",
+      role: "Co-founder",
+      icon: "👨‍💻",
+      color: "#67E8F9",
+      facts: [
+        "Карьера в Авито, Яндексе, основатель стартапов (Corilly — Y Combinator)",
+        "Обладатель двух виз талантов «на гениальность» — в США и Европе",
+        "Получил оффер в Google, стал Staff-инженером в лондонском офисе",
+        "Уникальное понимание перехода от восточноевропейских компаний к мировым лидерам",
+      ]
+    }
+  ],
+
+  resources: [
+    { icon: "🌐", label: "Сайт", value: "go-offer.us", url: "https://go-offer.us/" },
+    { icon: "📣", label: "Телеграм-канал", value: "t.me/goofferus", url: "https://t.me/+Jzip5rokBP80YjJi" },
+    { icon: "👥", label: "Комьюнити", value: "t.me/gooffercommunity", url: "https://t.me/+ZFLGbJnYNV4xN2My" },
+    { icon: "▶️", label: "YouTube", value: "@GoOfferUS", url: "https://www.youtube.com/@GoOfferUS" },
+    { icon: "📸", label: "Instagram", value: "@go_offer", url: "https://www.instagram.com/go_offer/" },
+  ],
+
+  audience: [
+    { icon: "💻", title: "IT и разработка", desc: "Frontend, Backend, Full-stack, Mobile, DevOps, QA, ML-инженеры, Data Engineers" },
+    { icon: "📊", title: "Данные и аналитика", desc: "Data Scientists, Data Analysts, BI-специалисты, Growth и Marketing аналитики" },
+    { icon: "🚀", title: "Продукт и менеджмент", desc: "Product Managers, Project Managers, Business Analysts, Scrum Masters" },
+    { icon: "🎨", title: "Дизайн", desc: "UX/UI дизайнеры, Product дизайнеры, Motion-дизайнеры, дизайн-системщики" },
+    { icon: "💰", title: "Финансы и операции", desc: "Financial Analysts, Controllers, Operations Managers, Customer Success" },
+    { icon: "👥", title: "HR и маркетинг", desc: "HR, рекрутеры, Talent Acquisition, Digital Marketing, SMM, SEO/SEM" },
+  ],
+
+  problems: [
+    { icon: "😶", title: "Обнуление опыта", desc: "Яндекс, TikTok, Mail.ru — компании мирового уровня, но для американского рекрутера это «что-то неизвестное». Мы помогаем правильно упаковать опыт." },
+    { icon: "📉", title: "Сложный рынок труда", desc: "После ковидного бума число вакансий упало вдвое. Волны сокращений в Google, Meta, Microsoft создали беспрецедентную конкуренцию." },
+    { icon: "🛂", title: "Визовый барьер", desc: "Работодатели часто опасаются иммигрантов из-за неопределённости со спонсорством виз. Мы знаем, как работать с этим возражением." },
+    { icon: "🗣️", title: "Культурный код", desc: "Американские интервью требуют активной самопрезентации. Многие клиенты никогда не «продавали» себя — на родине работа находила их сама." },
+    { icon: "😔", title: "Эмоциональное выгорание", desc: "Сотни отказов при молчании в ответ — психологически тяжело. Без поддержки многие сдаются на полпути к успеху." },
+    { icon: "🔄", title: "Отсутствие системы", desc: "В США поиск работы — это полноценный проект. Спорадические попытки не работают. Нужна стратегия, объём и дисциплина." },
+  ],
+
   departments: [
     { name: "Кураторы", icon: "🎓", desc: "Сопровождают клиента от онбординга до оффера", color: "#A78BFA" },
     { name: "Sales", icon: "💼", desc: "Продают программы и консультируют по тарифам", color: "#F472B6" },
-    { name: "IT / Боты", icon: "🤖", desc: "Разрабатывают и поддерживают автоматизацию", color: "#67E8F9" },
+    { name: "IT", icon: "🤖", desc: "Разрабатывают и поддерживают автоматизацию", color: "#67E8F9" },
     { name: "ОКК", icon: "📊", desc: "Контроль качества, разбор конфликтов, аттестации", color: "#FBBF24" },
     { name: "HR", icon: "👥", desc: "Найм, адаптация, развитие команды", color: "#34D399" },
-    { name: "Отдел заботы", icon: "💙", desc: "Success Fee, закрытие программ, поддержка после", color: "#FB923C" },
+    { name: "Отдел заботы", icon: "💙", desc: "Success Fee, закрытие программ, работа с возвратами", color: "#FB923C" },
   ],
-  contacts: [
-    { label: "Поддержка клиентов", value: "support@go-offer.us" },
-    { label: "ОКК", value: "okk@go-offer.us" },
-    { label: "Бухгалтерия", value: "billing@go-offer.us" },
-    { label: "IT тикеты", value: "linear.app" },
-    { label: "Платформа", value: "mentor.go-offer.us" },
-  ]
 };
 
 const CURATOR_ROLE = {
@@ -321,12 +311,19 @@ const CURATOR_ROLE = {
     { metric: "Оценка ОКК", target: "4.5 / 5", note: "по 5 критериям" },
   ],
   rights: [
-    "Запрашивать информацию у любого отдела через Linear",
     "Эскалировать конфликт в ОКК при переходе на личности",
     "Брать паузу на обдумывание ответа (сообщить клиенту)",
     "Предлагать идеи по улучшению процессов в общем чате",
+    "Создавать тикеты в Linear для IT-задач и технических проблем",
   ],
-  schedule: "ПН–ПТ, 16:00–01:00 МСК (09:00–18:00 EST). СБ–ВС — выходные. Ночной бэклог разбирается в первые 2 часа следующей смены.",
+  vacation: [
+    "Уведомить команду минимум за 2 недели в письменном виде",
+    "Согласовать замену — передать менти другому куратору",
+    "Закрыть все срочные задачи до отпуска или делегировать",
+    "Отпуск не останавливает обязательства перед активными менти — замена обязательна",
+    "Максимум 2 недели подряд без отдельного согласования с руководством",
+  ],
+  schedule: "ПН–ПТ, 16:00–01:00 МСК (09:00–18:00 EST). СБ–ВС — выходные.",
 };
 
 const TARIFF_CHECKLISTS = {
@@ -1399,6 +1396,8 @@ function LinksView() {
 }
 
 function CompanyView() {
+  var sectionLabel = { fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 16 };
+  var card = { background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "20px 22px", marginBottom: 16 };
   return (
     <div style={{ maxWidth: 820 }}>
       <div style={{ marginBottom: 24 }}>
@@ -1406,7 +1405,7 @@ function CompanyView() {
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Go Offer — кто мы, зачем и с кем работаем</p>
       </div>
 
-      {/* Mission card */}
+      {/* Mission */}
       <div style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.1),rgba(244,114,182,0.07))", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 16, padding: "22px 24px", marginBottom: 16, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#A78BFA,#F472B6)" }} />
         <div style={{ fontSize: 11, fontWeight: 700, color: "#A78BFA", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Миссия</div>
@@ -1414,9 +1413,9 @@ function CompanyView() {
       </div>
 
       {/* Values */}
-      <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 16 }}>Ценности</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+      <div style={card}>
+        <div style={sectionLabel}>Ценности</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
           {COMPANY_INFO.values.map(function(v, i) {
             return (
               <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
@@ -1431,9 +1430,79 @@ function CompanyView() {
         </div>
       </div>
 
+      {/* Founders */}
+      <div style={card}>
+        <div style={sectionLabel}>Фаундеры и история</div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, marginBottom: 16 }}>
+          Анна и Кирилл познакомились в Яндексе. Оба прошли через сложный поиск работы после переезда и превратили этот опыт в систему, которая помогает сотням иммигрантов.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          {COMPANY_INFO.founders.map(function(f, i) {
+            return (
+              <div key={i} style={{ background: f.color + "0D", border: "1px solid " + f.color + "30", borderRadius: 12, padding: "16px 18px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <div style={{ fontSize: 26 }}>{f.icon}</div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: f.color }}>{f.name}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{f.role}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {f.facts.map(function(fact, j) {
+                    return (
+                      <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <div style={{ color: f.color, fontSize: 10, marginTop: 4, flexShrink: 0 }}>●</div>
+                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.55 }}>{fact}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Audience */}
+      <div style={card}>
+        <div style={sectionLabel}>С кем мы работаем</div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, marginBottom: 16 }}>
+          Наши клиенты — специалисты из России, Украины, Беларуси и Казахстана, которые строили карьеру на родине и хотят применить свой опыт в США. Многие работали в Яндексе, Mail.ru, TikTok, Kaspersky — компаниях, сопоставимых по уровню с американскими технологическими гигантами.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+          {COMPANY_INFO.audience.map(function(a, i) {
+            return (
+              <div key={i} style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 10, padding: "13px 14px" }}>
+                <div style={{ fontSize: 18, marginBottom: 7 }}>{a.icon}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", marginBottom: 4 }}>{a.title}</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", lineHeight: 1.55 }}>{a.desc}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Problems we solve */}
+      <div style={card}>
+        <div style={sectionLabel}>Проблемы, которые мы решаем</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
+          {COMPANY_INFO.problems.map(function(p, i) {
+            return (
+              <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 10, padding: "13px 14px" }}>
+                <div style={{ fontSize: 22, flexShrink: 0 }}>{p.icon}</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 4 }}>{p.title}</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", lineHeight: 1.6 }}>{p.desc}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Departments */}
-      <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "20px 22px", marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 16 }}>Отделы</div>
+      <div style={card}>
+        <div style={sectionLabel}>Отделы</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
           {COMPANY_INFO.departments.map(function(d, i) {
             return (
@@ -1449,18 +1518,25 @@ function CompanyView() {
         </div>
       </div>
 
-      {/* Contacts */}
+      {/* Resources */}
       <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
         <div style={{ padding: "13px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px" }}>Контакты</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px" }}>Наши ресурсы</div>
         </div>
-        {COMPANY_INFO.contacts.map(function(c, i) {
+        {COMPANY_INFO.resources.map(function(r, i) {
           return (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 20px", borderBottom: i < COMPANY_INFO.contacts.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 20px", borderBottom: i < COMPANY_INFO.resources.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}
               onMouseEnter={function(e) { e.currentTarget.style.background = "rgba(255,255,255,0.025)"; }}
               onMouseLeave={function(e) { e.currentTarget.style.background = "transparent"; }}>
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{c.label}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#A78BFA" }}>{c.value}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                <span style={{ fontSize: 15 }}>{r.icon}</span>
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{r.label}</span>
+              </div>
+              <a href={r.url} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 600, color: "#A78BFA", textDecoration: "none" }}
+                onMouseEnter={function(e) { e.target.style.textDecoration = "underline"; }}
+                onMouseLeave={function(e) { e.target.style.textDecoration = "none"; }}>
+                {r.value}
+              </a>
             </div>
           );
         })}
@@ -1526,7 +1602,7 @@ function CuratorRoleView() {
       </div>
 
       {/* Rights */}
-      <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "18px 20px" }}>
+      <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "18px 20px", marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 14 }}>Права куратора</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
           {CURATOR_ROLE.rights.map(function(r, i) {
@@ -1534,6 +1610,24 @@ function CuratorRoleView() {
               <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
                 <div style={{ width: 20, height: 20, background: "rgba(167,139,250,0.15)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#A78BFA", flexShrink: 0, marginTop: 1 }}>✓</div>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.6 }}>{r}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Vacation */}
+      <div style={{ background: "rgba(52,211,153,0.05)", border: "1px solid rgba(52,211,153,0.2)", borderRadius: 14, padding: "18px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <span style={{ fontSize: 16 }}>🏖️</span>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(52,211,153,0.8)", textTransform: "uppercase", letterSpacing: "0.7px" }}>Правило об отпуске</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          {CURATOR_ROLE.vacation.map(function(v, i) {
+            return (
+              <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
+                <div style={{ color: "#34D399", fontSize: 10, marginTop: 5, flexShrink: 0 }}>●</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.6 }}>{v}</div>
               </div>
             );
           })}
@@ -1717,16 +1811,43 @@ const INITIAL_CLIENTS = (function() {
   return ksyusha.map(function(n) { return fmt(n, "Ксюша"); }).concat(sasha.map(function(n) { return fmt(n, "Саша"); }));
 })();
 
+// Accounts allowed to edit clients data
+const EDITORS = [
+  "irina-romashkina@go-offer.us",
+  "kseniya-belyntseva@go-offer.us",
+  "aleksandra-sheider@go-offer.us",
+];
+
 function ClientsView({ currentUser }) {
-  const [clients, setClients]     = useState(INITIAL_CLIENTS);
+  var canEdit = currentUser && EDITORS.indexOf(currentUser.email.toLowerCase()) >= 0;
+
+  const [clients, setClients]     = useState(function() {
+    try {
+      var saved = localStorage.getItem("go_offer_clients");
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return INITIAL_CLIENTS;
+  });
   const [showAdd, setShowAdd]     = useState(false);
   const [selected, setSelected]   = useState(null);
-  const [checkedMap, setCheckedMap] = useState({});   // clientId_itemId → bool
-  const [commentsMap, setCommentsMap] = useState({}); // clientId_itemId → string
-  const [editingComment, setEditingComment] = useState(null); // itemId being edited
+  const [checkedMap, setCheckedMap] = useState(function() {
+    try {
+      var saved = localStorage.getItem("go_offer_checked");
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return {};
+  });
+  const [commentsMap, setCommentsMap] = useState(function() {
+    try {
+      var saved = localStorage.getItem("go_offer_comments");
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return {};
+  });
+  const [editingComment, setEditingComment] = useState(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [hoveredPhase, setHoveredPhase] = useState(null);
-  const [activePhase, setActivePhase] = useState(null); // drill-down on click
+  const [activePhase, setActivePhase] = useState(null);
   const [form, setForm] = useState({
     name: "", tariff: "take-all",
     curator: currentUser ? currentUser.name : "Ксюша",
@@ -1737,6 +1858,17 @@ function ClientsView({ currentUser }) {
   const [filterCurator, setFilterCurator] = useState("Все");
   const [filterStatus, setFilterStatus] = useState("Все");
   const [search, setSearch] = useState("");
+
+  // Persist to localStorage on changes
+  React.useEffect(function() {
+    try { localStorage.setItem("go_offer_clients", JSON.stringify(clients)); } catch(e) {}
+  }, [clients]);
+  React.useEffect(function() {
+    try { localStorage.setItem("go_offer_checked", JSON.stringify(checkedMap)); } catch(e) {}
+  }, [checkedMap]);
+  React.useEffect(function() {
+    try { localStorage.setItem("go_offer_comments", JSON.stringify(commentsMap)); } catch(e) {}
+  }, [commentsMap]);
 
   var tariffColors = {
     "take-all": "#A78BFA", "take-all-plus": "#F472B6", "vip": "#FBBF24",
@@ -1766,6 +1898,19 @@ function ClientsView({ currentUser }) {
   function toggleCheck(clientId, itemId) {
     var key = clientId + "_" + itemId;
     setCheckedMap(function(p) { var n = Object.assign({}, p); n[key] = !p[key]; return n; });
+  }
+
+  function togglePhaseAll(clientId, phaseKey) {
+    var cl = TARIFF_CHECKLISTS[selected && selected.tariff];
+    if (!cl) return;
+    var items = cl[phaseKey] || [];
+    if (!items.length) return;
+    var allDone = items.every(function(it) { return checkedMap[clientId + "_" + it.id]; });
+    setCheckedMap(function(p) {
+      var n = Object.assign({}, p);
+      items.forEach(function(it) { n[clientId + "_" + it.id] = !allDone; });
+      return n;
+    });
   }
 
   function saveComment(clientId, itemId) {
@@ -1830,7 +1975,21 @@ function ClientsView({ currentUser }) {
           <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{selected.name}</div>
           <span style={{ fontSize: 11, color: tarColor, background: tarColor + "18", border: "1px solid " + tarColor + "33", padding: "3px 10px", borderRadius: 20, fontWeight: 700 }}>{TARIFF_LABELS[selected.tariff]}</span>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.06)", padding: "3px 10px", borderRadius: 20 }}>👤 {selected.curator}</span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginLeft: "auto" }}>Старт: {selected.startDate}</span>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "4px 10px" }}>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>📅 Старт:</span>
+            <input
+              type="date"
+              value={selected.startDate}
+              onChange={function(e) {
+                var newDate = e.target.value;
+                setClients(function(p) {
+                  return p.map(function(c) { return c.id === selected.id ? Object.assign({}, c, { startDate: newDate }) : c; });
+                });
+                setSelected(function(s) { return Object.assign({}, s, { startDate: newDate }); });
+              }}
+              style={{ background: "transparent", border: "none", color: "#fff", fontSize: 12, fontWeight: 600, outline: "none", cursor: "pointer", fontFamily: "inherit" }}
+            />
+          </div>
         </div>
 
         {/* Status funnel strip */}
@@ -1863,20 +2022,53 @@ function ClientsView({ currentUser }) {
         </div>
 
         {/* Overall progress */}
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 13, padding: "14px 20px", marginBottom: 16, display: "flex", gap: 20, alignItems: "center" }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Общий прогресс: <span style={{ color: tarColor, fontWeight: 700 }}>{prog.done}/{prog.total}</span></span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: pct === 100 ? "#34D399" : tarColor }}>{pct}%</span>
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 13, padding: "14px 20px", marginBottom: 16 }}>
+          <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 14 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Общий прогресс: <span style={{ color: tarColor, fontWeight: 700 }}>{prog.done}/{prog.total}</span></span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: pct === 100 ? "#34D399" : tarColor }}>{pct}%</span>
+              </div>
+              <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99 }}>
+                <div style={{ height: "100%", width: pct + "%", background: "linear-gradient(90deg," + tarColor + "," + tarColor + "88)", borderRadius: 99, transition: "width 0.4s", boxShadow: "0 0 8px " + tarColor + "60" }} />
+              </div>
             </div>
-            <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99 }}>
-              <div style={{ height: "100%", width: pct + "%", background: "linear-gradient(90deg," + tarColor + "," + tarColor + "88)", borderRadius: 99, transition: "width 0.4s", boxShadow: "0 0 8px " + tarColor + "60" }} />
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Ганта день</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: elapsed >= TOTAL_DAYS ? "#34D399" : "#fff" }}>{elapsed}<span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>/{TOTAL_DAYS}</span></div>
             </div>
           </div>
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>День программы</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: elapsed >= TOTAL_DAYS ? "#34D399" : "#fff" }}>{elapsed}<span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>/{TOTAL_DAYS}</span></div>
-          </div>
+
+          {/* 180-day program timeline */}
+          {(function() {
+            var totalDays = 180;
+            var daysIn = daysSinceStart(selected);
+            var daysLeft = totalDays - daysIn;
+            var pct180 = Math.min(100, Math.round(daysIn / totalDays * 100));
+            var isOver = daysIn >= totalDays;
+            var isWarning = !isOver && daysLeft <= 30;
+            var isUrgent = !isOver && daysLeft <= 14;
+            var barColor = isOver ? "#64748B" : isUrgent ? "#F87171" : isWarning ? "#FBBF24" : "#34D399";
+            return (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>📅 Программа (180 дней)</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: barColor }}>
+                    {isOver ? "Программа завершена" : "День " + daysIn + " · осталось " + daysLeft + " дн."}
+                  </span>
+                </div>
+                <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: pct180 + "%", background: "linear-gradient(90deg," + barColor + "," + barColor + "99)", borderRadius: 99, transition: "width 0.4s" }} />
+                </div>
+                {(isWarning || isUrgent) && (
+                  <div style={{ marginTop: 8, padding: "8px 12px", background: isUrgent ? "rgba(248,113,113,0.08)" : "rgba(251,191,36,0.08)", border: "1px solid " + (isUrgent ? "rgba(248,113,113,0.3)" : "rgba(251,191,36,0.3)"), borderRadius: 8, fontSize: 12, color: barColor, display: "flex", gap: 7, alignItems: "center" }}>
+                    <span>{isUrgent ? "🔴" : "⚠️"}</span>
+                    <span>{isUrgent ? "Критично: до конца программы меньше 2 недель!" : "Внимание: до конца программы меньше месяца"}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── GANTT CHART ─────────────────────────────────────── */}
@@ -1955,6 +2147,14 @@ function ClientsView({ currentUser }) {
                   {/* Drill-down tasks */}
                   {isActive && phItems.length > 0 ? (
                     <div style={{ marginTop: 8, marginLeft: 120, background: "rgba(255,255,255,0.03)", border: "1px solid " + ph.color + "33", borderRadius: 10, overflow: "hidden" }}>
+                      {/* Phase header with bulk-check */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: ph.color, textTransform: "uppercase", letterSpacing: "0.5px" }}>{ph.icon} {ph.label}</div>
+                        <button onClick={function() { togglePhaseAll(selected.id, ph.key); }}
+                          style={{ fontSize: 11, fontWeight: 600, color: phPct === 100 ? "rgba(255,255,255,0.3)" : ph.color, background: ph.color + "15", border: "1px solid " + ph.color + "40", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>
+                          {phPct === 100 ? "Снять все" : "Отметить все ✓"}
+                        </button>
+                      </div>
                       {phItems.map(function(item, idx) {
                         var done = !!checkedMap[selected.id + "_" + item.id];
                         var commentKey = selected.id + "_" + item.id;
@@ -2061,7 +2261,7 @@ function ClientsView({ currentUser }) {
 
       {/* ── FUNNEL ─────────────────────────────────────────────── */}
       {clients.length > 0 ? (
-        <div style={{ marginBottom: 18, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 16px", overflowX: "auto" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 10, marginBottom: 18, background: "rgba(14,10,30,0.92)", backdropFilter: "blur(12px)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", overflowX: "auto" }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 12 }}>Воронка клиентов</div>
           <div style={{ display: "flex", alignItems: "stretch", gap: 3, minWidth: "fit-content" }}>
             {STATUS_STAGES.map(function(st, idx) {
@@ -2250,11 +2450,38 @@ function ClientsView({ currentUser }) {
                       );
                     })}
                   </div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 5 }}>
+                  <div style={{ display: "flex", gap: 8, marginTop: 5, alignItems: "center" }}>
                     {GANTT_PHASES.map(function(ph) {
                       var phProg = prog.byPhase[ph.key] || { done: 0, total: 0 };
                       return <span key={ph.key} style={{ fontSize: 9, color: ph.color + "99" }}>{ph.icon} {phProg.done}/{phProg.total}</span>;
                     })}
+                    <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700,
+                      color: (function() {
+                        var days = daysSinceStart(client);
+                        var left = 180 - days;
+                        if (left <= 14) return "#F87171";
+                        if (left <= 30) return "#FBBF24";
+                        return "rgba(255,255,255,0.3)";
+                      })(),
+                      background: (function() {
+                        var left = 180 - daysSinceStart(client);
+                        if (left <= 14) return "rgba(248,113,113,0.1)";
+                        if (left <= 30) return "rgba(251,191,36,0.1)";
+                        return "rgba(255,255,255,0.05)";
+                      })(),
+                      border: "1px solid " + (function() {
+                        var left = 180 - daysSinceStart(client);
+                        if (left <= 14) return "rgba(248,113,113,0.3)";
+                        if (left <= 30) return "rgba(251,191,36,0.3)";
+                        return "rgba(255,255,255,0.08)";
+                      })(),
+                      padding: "2px 7px", borderRadius: 6
+                    }}>
+                      День {daysSinceStart(client)}
+                      {(180 - daysSinceStart(client)) <= 30 && (180 - daysSinceStart(client)) > 0
+                        ? " · осталось " + (180 - daysSinceStart(client)) + " д."
+                        : (180 - daysSinceStart(client)) <= 0 ? " · программа завершена" : ""}
+                    </span>
                   </div>
                 </div>
               </div>
