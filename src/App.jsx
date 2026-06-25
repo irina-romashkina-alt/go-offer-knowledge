@@ -711,7 +711,7 @@ function ProductAndTariffsView() {
   var tar = TARIFFS.find(function(t) { return t.id === activeTariff; });
 
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div style={{ maxWidth: 1100 }}>
       <div style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Тарифы и продукты</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Всё о программах Go Offer, стратсессия и доп. услуги</p>
@@ -1120,7 +1120,7 @@ function AIView() {
   function clearChat() { setCurrentMsgs([]); }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 120px)", maxWidth: 820 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 120px)", maxWidth: 1100 }}>
       <div style={{ marginBottom: 14, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>AI-помощник</h1>
@@ -1230,7 +1230,7 @@ function GuideView() {
   var step = GUIDE_STEPS[activeStep];
 
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div style={{ maxWidth: 1100 }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Гайд куратора</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Пошаговый процесс работы с менти — от онбординга до оффера</p>
@@ -1332,7 +1332,7 @@ function LinksView() {
   var tagColors = { "Notion": "#A78BFA", "Google Docs": "#34D399", "Google Sheets": "#34D399", "Платформа": "#FBBF24", "CRM": "#F472B6", "Calendar": "#FBBF24" };
 
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div style={{ maxWidth: 1100 }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Полезные ссылки</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>FAQ — все нужные документы и инструменты в одном месте</p>
@@ -1399,7 +1399,7 @@ function CompanyView() {
   var sectionLabel = { fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 16 };
   var card = { background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "20px 22px", marginBottom: 16 };
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div style={{ maxWidth: 1100 }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Компания</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Go Offer — кто мы, зачем и с кем работаем</p>
@@ -1547,7 +1547,7 @@ function CompanyView() {
 
 function CuratorRoleView() {
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div style={{ maxWidth: 1100 }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Роль куратора</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Суть роли, KPI и права</p>
@@ -1666,7 +1666,7 @@ function ChecklistView() {
   var progress = allItems.length ? Math.round(doneCount / allItems.length * 100) : 0;
 
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div style={{ maxWidth: 1100 }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Чеклист по тарифам</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Отмечай выполненные шаги по каждому клиенту</p>
@@ -1984,7 +1984,7 @@ function ClientsView({ currentUser }) {
     var elapsed = Math.min(daysSinceStart(selected), TOTAL_DAYS);
 
     return (
-      <div style={{ maxWidth: 960 }}>
+      <div style={{ maxWidth: 1100 }}>
         {/* Back + header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
           <button onClick={function() { setSelected(null); setActivePhase(null); }}
@@ -2265,7 +2265,7 @@ function ClientsView({ currentUser }) {
 
   // ── List view ─────────────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div style={{ maxWidth: 1100 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
         <div>
           <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Клиенты</h1>
