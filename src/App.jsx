@@ -2755,6 +2755,18 @@ export default function App() {
   var [search, setSearch] = useState("");
   var [notif, setNotif] = useState(false);
   var [userMenu, setUserMenu] = useState(false);
+  var [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(function() {
+    function onResize() {
+      var mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (mobile) setSidebar(false);
+    }
+    window.addEventListener("resize", onResize);
+    onResize();
+    return function() { window.removeEventListener("resize", onResize); };
+  }, []);
 
   if (!user) {
     return <LoginScreen onLogin={setUser} />;
@@ -2776,7 +2788,29 @@ export default function App() {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#080516", fontFamily: "Inter,-apple-system,sans-serif", overflow: "hidden", position: "relative" }}>
-      <style dangerouslySetInnerHTML={{__html: "* { box-sizing: border-box; margin: 0; padding: 0; } ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(167,139,250,0.3); border-radius: 99px; } input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.22); } button { font-family: inherit; cursor: pointer; } @keyframes dot1 { 0%,80%,100%{opacity:.3} 40%{opacity:1} }"}} />
+      <style dangerouslySetInnerHTML={{__html: `
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(167,139,250,0.3); border-radius: 99px; }
+        input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.22); }
+        button { font-family: inherit; cursor: pointer; }
+        @keyframes dot1 { 0%,80%,100%{opacity:.3} 40%{opacity:1} }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        .mobile-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+        .mobile-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+        .mobile-stack { display: grid; grid-template-columns: 240px 1fr; gap: 14px; }
+        .mobile-tariff-grid { display: grid; grid-template-columns: 260px 1fr; gap: 14px; }
+        @media (max-width: 768px) {
+          .mobile-grid-2 { grid-template-columns: 1fr !important; }
+          .mobile-grid-3 { grid-template-columns: repeat(2,1fr) !important; }
+          .mobile-stack { grid-template-columns: 1fr !important; }
+          .mobile-tariff-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .mobile-grid-3 { grid-template-columns: 1fr !important; }
+        }
+      `}} />
 
       <div style={{ position: "fixed", top: -150, left: -150, width: 500, height: 500, background: "radial-gradient(circle,rgba(167,139,250,0.1),transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
       <div style={{ position: "fixed", bottom: -150, right: -100, width: 450, height: 450, background: "radial-gradient(circle,rgba(244,114,182,0.07),transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
@@ -2785,7 +2819,7 @@ export default function App() {
         return <div key={i} style={{ position: "fixed", left: ((i*37+13)%100) + "%", top: ((i*53+7)%100) + "%", width: (i%3)+1, height: (i%3)+1, background: i%5===0 ? "#A78BFA" : "#fff", borderRadius: "50%", opacity: 0.1+(i%5)*0.05, pointerEvents: "none", zIndex: 0 }} />;
       })}
 
-      <aside style={{ width: SW, flexShrink: 0, background: "rgba(255,255,255,0.03)", backdropFilter: "blur(20px)", borderRight: "1px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column", transition: "width 0.22s ease", overflow: "hidden", zIndex: 10, position: "relative" }}>
+      <aside style={{ width: isMobile ? 0 : SW, flexShrink: 0, background: "rgba(255,255,255,0.03)", backdropFilter: "blur(20px)", borderRight: "1px solid rgba(255,255,255,0.07)", display: isMobile ? "none" : "flex", flexDirection: "column", transition: "width 0.22s ease", overflow: "hidden", zIndex: 10, position: "relative" }}>
         <div style={{ height: 60, display: "flex", alignItems: "center", padding: sidebar ? "0 13px" : "0 10px", justifyContent: sidebar ? "space-between" : "center", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
           {sidebar ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2838,41 +2872,60 @@ export default function App() {
       </aside>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, position: "relative", zIndex: 1 }}>
-        <header style={{ height: 60, background: "rgba(255,255,255,0.03)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, flexShrink: 0 }}>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <span style={{ color: "rgba(255,255,255,0.25)" }}>Главная</span>
-            <span style={{ color: "rgba(255,255,255,0.13)" }}>/</span>
+        <header style={{ height: 56, background: "rgba(255,255,255,0.03)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: isMobile ? "0 14px" : "0 20px", gap: 10, flexShrink: 0 }}>
+          {isMobile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <div style={{ width: 26, height: 26, background: "linear-gradient(135deg,#A78BFA,#F472B6)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>🍍</div>
+              <div style={{ fontWeight: 800, fontSize: 13, color: "#fff" }}>Go Offer</div>
+            </div>
+          )}
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 5, fontSize: 13 }}>
+            {!isMobile && <><span style={{ color: "rgba(255,255,255,0.25)" }}>Главная</span><span style={{ color: "rgba(255,255,255,0.13)" }}>/</span></>}
             <span style={{ color: "#A78BFA", fontWeight: 600 }}>{labels[activeNav] || activeNav}</span>
           </div>
-          {activeNav === "knowledge" ? (
+          {activeNav === "knowledge" && !isMobile ? (
             <div style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "6px 11px", width: 200, border: "1px solid rgba(255,255,255,0.08)" }}>
               <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 12 }}>🔍</span>
               <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Поиск..." style={{ background: "none", border: "none", outline: "none", fontSize: 13, color: "#fff", width: "100%" }} />
             </div>
           ) : null}
           <div style={{ display: "flex", gap: 6, position: "relative" }}>
-            <button onClick={function() { setNotif(function(p) { return !p; }); setUserMenu(false); }} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, position: "relative" }}>
-              🔔<div style={{ position: "absolute", top: 5, right: 5, width: 5, height: 5, background: "#F472B6", borderRadius: "50%", border: "1.5px solid #080516" }} />
-            </button>
-            {notif ? (
-              <div style={{ position: "absolute", top: 40, right: 40, width: 230, background: "rgba(10,5,28,0.97)", backdropFilter: "blur(20px)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 11, zIndex: 100, padding: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#A78BFA", marginBottom: 8 }}>Уведомления</div>
-                <div style={{ padding: "7px 5px", fontSize: 12, color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>Новый документ в базе знаний</div>
-                <div style={{ padding: "7px 5px", fontSize: 12, color: "rgba(255,255,255,0.6)" }}>Напоминание: заполни отчет</div>
-              </div>
-            ) : null}
-            <button onClick={function() { setUserMenu(function(p) { return !p; }); setNotif(false); }} style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#A78BFA,#F472B6)", border: "none", color: "#fff", fontWeight: 700, fontSize: 12 }}>И</button>
+            {!isMobile && (
+              <>
+                <button onClick={function() { setNotif(function(p) { return !p; }); setUserMenu(false); }} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, position: "relative" }}>
+                  🔔<div style={{ position: "absolute", top: 5, right: 5, width: 5, height: 5, background: "#F472B6", borderRadius: "50%", border: "1.5px solid #080516" }} />
+                </button>
+                {notif ? (
+                  <div style={{ position: "absolute", top: 40, right: 40, width: 230, background: "rgba(10,5,28,0.97)", backdropFilter: "blur(20px)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 11, zIndex: 100, padding: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#A78BFA", marginBottom: 8 }}>Уведомления</div>
+                    <div style={{ padding: "7px 5px", fontSize: 12, color: "rgba(255,255,255,0.6)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>Новый документ в базе знаний</div>
+                    <div style={{ padding: "7px 5px", fontSize: 12, color: "rgba(255,255,255,0.6)" }}>Напоминание: заполни отчет</div>
+                  </div>
+                ) : null}
+              </>
+            )}
+            <button onClick={function() { setUserMenu(function(p) { return !p; }); setNotif(false); }} style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#A78BFA,#F472B6)", border: "none", color: "#fff", fontWeight: 700, fontSize: 12 }}>{user.name.charAt(0).toUpperCase()}</button>
             {userMenu ? (
               <div style={{ position: "absolute", top: 40, right: 0, width: 155, background: "rgba(10,5,28,0.97)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 11, zIndex: 100, padding: 6 }}>
-                <div style={{ padding: "7px 9px", borderRadius: 7, fontSize: 13, color: "rgba(255,255,255,0.65)", cursor: "pointer" }}>Профиль</div>
-                <div style={{ padding: "7px 9px", borderRadius: 7, fontSize: 13, color: "rgba(255,255,255,0.65)", cursor: "pointer" }}>Настройки</div>
-                <div style={{ padding: "7px 9px", borderRadius: 7, fontSize: 13, color: "#F472B6", cursor: "pointer" }}>Выйти</div>
+                <div style={{ padding: "7px 9px", borderRadius: 7, fontSize: 13, color: "rgba(255,255,255,0.65)" }}>Профиль</div>
+                <div style={{ padding: "7px 9px", borderRadius: 7, fontSize: 13, color: "rgba(255,255,255,0.65)" }}>Настройки</div>
+                <div onClick={function() { setUser(null); }} style={{ padding: "7px 9px", borderRadius: 7, fontSize: 13, color: "#F472B6", cursor: "pointer" }}>Выйти</div>
               </div>
             ) : null}
           </div>
         </header>
 
-        <main style={{ flex: 1, overflowY: "auto", padding: "20px" }} onClick={function() { setNotif(false); setUserMenu(false); }}>
+        {/* Поиск на мобиле */}
+        {isMobile && activeNav === "knowledge" && (
+          <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.05)", borderRadius: 9, padding: "8px 12px", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 13 }}>🔍</span>
+              <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Поиск..." style={{ background: "none", border: "none", outline: "none", fontSize: 14, color: "#fff", width: "100%", fontFamily: "inherit" }} />
+            </div>
+          </div>
+        )}
+
+        <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px 12px" : "20px", paddingBottom: isMobile ? "80px" : "20px" }} onClick={function() { setNotif(false); setUserMenu(false); }}>
           {activeNav === "clients" ? <ClientsView currentUser={user} /> : null}
           {activeNav === "company" ? <CompanyView /> : null}
           {activeNav === "curator" ? <CuratorRoleView /> : null}
@@ -2883,6 +2936,23 @@ export default function App() {
           {activeNav === "ai" ? <AIView /> : null}
           {activeNav === "links" ? <LinksView /> : null}
         </main>
+
+        {/* Нижняя навигация для мобиле */}
+        {isMobile && (
+          <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 64, background: "rgba(8,5,22,0.97)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-around", zIndex: 50, paddingBottom: "env(safe-area-inset-bottom)" }}>
+            {NAV.map(function(item) {
+              var active = activeNav === item.id;
+              return (
+                <button key={item.id} onClick={function() { setActiveNav(item.id); }}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "6px 4px", background: "none", border: "none", color: active ? "#A78BFA" : "rgba(255,255,255,0.3)", minWidth: 36, flex: 1 }}>
+                  <span style={{ fontSize: 20, lineHeight: 1 }}>{item.icon}</span>
+                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 400, letterSpacing: "0.2px", maxWidth: 40, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+                  {active && <div style={{ width: 4, height: 4, background: "#A78BFA", borderRadius: "50%" }} />}
+                </button>
+              );
+            })}
+          </nav>
+        )}
       </div>
     </div>
   );
