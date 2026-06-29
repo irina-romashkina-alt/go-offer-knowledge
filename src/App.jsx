@@ -2568,15 +2568,12 @@ function ClientsView({ currentUser }) {
           stratTldv.sort(function(a, b) { return a.num - b.num; });
           mockTldv.sort(function(a, b) { return a.num - b.num; });
 
-          var hasAnyData = stratTldv.length > 0 || mockTldv.length > 0 || clientNote;
-          if (!hasAnyData) return null;
-
           function TldvEntry({ item, color }) {
             var e = item.entry;
             return (
               <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 9, padding: "11px 14px", marginBottom: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: color }}>#{item.num}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: color }}>Сессия #{item.num}</span>
                   <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{e.date}</span>
                 </div>
                 <a href={e.url} target="_blank" rel="noreferrer"
@@ -2589,35 +2586,44 @@ function ClientsView({ currentUser }) {
             );
           }
 
-          return (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 12 }}>🧠 Материалы от ментора</div>
-              <div style={{ display: "grid", gridTemplateColumns: stratTldv.length && mockTldv.length ? "1fr 1fr" : "1fr", gap: 12 }}>
-
-                {/* Страт-сессии */}
-                {stratTldv.length > 0 && (
-                  <div style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 13, padding: "14px 16px" }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#A78BFA", marginBottom: 12 }}>🎯 Страт-сессии ({stratTldv.length})</div>
-                    {stratTldv.map(function(item) { return <TldvEntry key={item.key} item={item} color="#A78BFA" />; })}
-                  </div>
-                )}
-
-                {/* Моки */}
-                {mockTldv.length > 0 && (
-                  <div style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 13, padding: "14px 16px" }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#FBBF24", marginBottom: 12 }}>🎤 Моки ({mockTldv.length})</div>
-                    {mockTldv.map(function(item) { return <TldvEntry key={item.key} item={item} color="#FBBF24" />; })}
+          function CollapsibleSection({ icon, label, color, bgColor, borderColor, count, children }) {
+            var [open, setOpen] = useState(true);
+            return (
+              <div style={{ background: bgColor, border: "1px solid " + borderColor, borderRadius: 13, overflow: "hidden", marginBottom: 10 }}>
+                <div onClick={function() { setOpen(function(p) { return !p; }); }}
+                  style={{ display: "flex", alignItems: "center", gap: 9, padding: "12px 16px", cursor: "pointer", userSelect: "none" }}>
+                  <span style={{ fontSize: 15 }}>{icon}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: color, flex: 1 }}>{label}</span>
+                  {count > 0 && <span style={{ fontSize: 10, color: color, background: color + "20", border: "1px solid " + color + "40", borderRadius: 20, padding: "1px 8px", fontWeight: 700 }}>{count}</span>}
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{open ? "▲" : "▼"}</span>
+                </div>
+                {open && (
+                  <div style={{ padding: "0 16px 14px" }}>
+                    {count === 0
+                      ? <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>Ментор ещё не добавил записи</div>
+                      : children
+                    }
                   </div>
                 )}
               </div>
+            );
+          }
 
-              {/* Заметки ментора */}
-              {clientNote && (
-                <div style={{ marginTop: 12, background: "rgba(244,114,182,0.05)", border: "1px solid rgba(244,114,182,0.2)", borderRadius: 13, padding: "14px 16px" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#F472B6", marginBottom: 8 }}>📝 Заметки ментора</div>
-                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{clientNote}</div>
-                </div>
-              )}
+          return (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 12 }}>🧠 Материалы от ментора</div>
+
+              <CollapsibleSection icon="🎯" label="Страт-сессии" color="#A78BFA" bgColor="rgba(167,139,250,0.05)" borderColor="rgba(167,139,250,0.2)" count={stratTldv.length}>
+                {stratTldv.map(function(item) { return <TldvEntry key={item.key} item={item} color="#A78BFA" />; })}
+              </CollapsibleSection>
+
+              <CollapsibleSection icon="🎤" label="Моки" color="#FBBF24" bgColor="rgba(251,191,36,0.05)" borderColor="rgba(251,191,36,0.2)" count={mockTldv.length}>
+                {mockTldv.map(function(item) { return <TldvEntry key={item.key} item={item} color="#FBBF24" />; })}
+              </CollapsibleSection>
+
+              <CollapsibleSection icon="📝" label="Заметки ментора" color="#F472B6" bgColor="rgba(244,114,182,0.05)" borderColor="rgba(244,114,182,0.2)" count={clientNote ? 1 : 0}>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{clientNote}</div>
+              </CollapsibleSection>
             </div>
           );
         })()}
