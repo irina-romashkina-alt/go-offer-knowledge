@@ -1883,7 +1883,7 @@ async function sbLoadClients() {
   var clients = rows.map(function(r) {
     Object.assign(checkedMap, r.checked_map || {});
     Object.assign(commentsMap, r.comments_map || {});
-    return { id: r.id, name: r.name, tariff: r.tariff, curator: r.curator, status: r.status, startDate: r.start_date, notes: r.notes || "", assistant: r.assistant || "", workEmail: r.work_email || "", workPassword: r.work_password || "", resumeUrl: r.resume_url || "", totalApps: r.total_apps || 0, doneApps: r.done_apps || 0 };
+    return { id: r.id, name: r.name, tariff: r.tariff, curator: r.curator, status: r.status, startDate: r.start_date, notes: r.notes || "", assistant: r.assistant || "", mentor: r.mentor || "", workEmail: r.work_email || "", workPassword: r.work_password || "", resumeUrl: r.resume_url || "", totalApps: r.total_apps || 0, doneApps: r.done_apps || 0 };
   });
   return { clients, checkedMap, commentsMap };
 }
@@ -1900,6 +1900,7 @@ async function sbSaveClient(client, checkedMap, commentsMap) {
       start_date: client.startDate, notes: client.notes || "",
       checked_map: clientChecked, comments_map: clientComments,
       assistant: client.assistant || "",
+      mentor: client.mentor || "",
       work_email: client.workEmail || "",
       work_password: client.workPassword || "",
       resume_url: client.resumeUrl || "",
@@ -2997,24 +2998,476 @@ function AssistantView({ currentUser }) {
 
 // ── ЗАГЛУШКИ ДЛЯ ОСТАЛЬНЫХ РОЛЕЙ ──────────────────────────────────────────────
 
-function MentorView({ currentUser }) {
-  return (
-    <div style={{ maxWidth: 700, padding: "40px 0" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🧠</div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Кабинет ментора</div>
-        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>
-          Здесь будут: страт-сессии, записи TL;DV, LinkedIn-заметки, моки и чекапы.<br/>
-          Раздел в разработке — скоро появится!
-        </div>
-        <div style={{ marginTop: 24, display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(244,114,182,0.1)", border: "1px solid rgba(244,114,182,0.25)", borderRadius: 12, padding: "10px 20px", fontSize: 13, color: "#F472B6" }}>
-          🚧 Этап 2 — в разработке
+// ── ЧЕКЛИСТЫ ДЛЯ МЕНТОРА ──────────────────────────────────────────────────────
+// Кол-во сессий по тарифу
+const TARIFF_SESSIONS = {
+  "take-all":      { strategy: 1, mock: 2 },
+  "take-all-plus": { strategy: 3, mock: 4 },
+  "vip":           { strategy: 6, mock: 6 },
+  "default":       { strategy: 1, mock: 2 },
+};
+
+// Чеклист одной страт-сессии
+const SESSION_CHECKLIST = [
+  { id: "sc1", text: "Провести знакомство и собрать бэкграунд клиента" },
+  { id: "sc2", text: "Разобрать опыт и выявить сильные стороны" },
+  { id: "sc3", text: "Определить целевые позиции и компании" },
+  { id: "sc4", text: "Обсудить локацию и формат (remote/hybrid/onsite)" },
+  { id: "sc5", text: "Договориться о зарплатных ожиданиях" },
+  { id: "sc6", text: "Объяснить структуру программы и следующие шаги" },
+  { id: "sc7", text: "Передать задание на резюме-анкету" },
+  { id: "sc8", text: "Заполнить заметки для передачи куратору" },
+];
+
+// Чеклист одного мока
+const MOCK_CHECKLIST = [
+  { id: "mc1", text: "Self-pitch: Start → Salary → Experience → Visa" },
+  { id: "mc2", text: "Tell me about yourself" },
+  { id: "mc3", text: "Почему эта компания / роль?" },
+  { id: "mc4", text: "STAR-кейс: сложный проект" },
+  { id: "mc5", text: "STAR-кейс: конфликт в команде" },
+  { id: "mc6", text: "STAR-кейс: провал / чему научился" },
+  { id: "mc7", text: "Strengths and weaknesses" },
+  { id: "mc8", text: "Salary expectations" },
+  { id: "mc9", text: "Вопросы клиента к интервьюеру" },
+  { id: "mc10", text: "Оценить уверенность, темп речи, eye contact" },
+  { id: "mc11", text: "Дать письменный фидбэк по итогам" },
+];
+
+function SlotCard({ slotType, slotIndex, slotNum, clientId, checks, onToggle, tldv, onSaveTldv, onDeleteTldv, isLocked, isCurator }) {
+  var isStrategy = slotType === "strategy";
+  var checklist = isStrategy ? SESSION_CHECKLIST : MOCK_CHECKLIST;
+  var color = isStrategy ? "#A78BFA" : "#FBBF24";
+  var icon = isStrategy ? "🎯" : "🎤";
+  var label = isStrategy ? "Страт-сессия" : "Мок-интервью";
+  const [expanded, setExpanded] = useState(false);
+  const [showTldvForm, setShowTldvForm] = useState(false);
+  const [form, setForm] = useState({ url: "", desc: "", note: "" });
+
+  var doneCount = checklist.filter(function(it) {
+    return checks[clientId + "_" + slotType + slotIndex + "_" + it.id];
+  }).length;
+  var allDone = doneCount === checklist.length;
+  var isOpen = !isLocked && (slotIndex === 0 || expanded !== false);
+
+  function handleAddTldv() {
+    if (!form.url.trim()) return;
+    onSaveTldv({ id: Date.now(), url: form.url.trim(), desc: form.desc.trim(), note: form.note.trim(), date: new Date().toLocaleDateString("ru-RU") });
+    setForm({ url: "", desc: "", note: "" });
+    setShowTldvForm(false);
+  }
+
+  if (isLocked) {
+    return (
+      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12, padding: "14px 16px", opacity: 0.4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🔒</div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>{icon} {label} #{slotNum}</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>Откроется после завершения предыдущей</div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div style={{ background: allDone ? color + "08" : "rgba(255,255,255,0.025)", border: "1px solid " + (allDone ? color + "40" : "rgba(255,255,255,0.08)"), borderRadius: 12, overflow: "hidden" }}>
+      {/* Заголовок слота */}
+      <div onClick={function() { setExpanded(function(p) { return !p; }); }}
+        style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", cursor: "pointer" }}>
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: allDone ? color + "20" : "rgba(255,255,255,0.06)", border: "1px solid " + (allDone ? color + "40" : "rgba(255,255,255,0.1)"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>{allDone ? "✅" : icon}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: allDone ? color : "#fff" }}>{label} #{slotNum} {tldv && tldv.url ? "· 🎬" : ""}</div>
+          {tldv && tldv.date && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>{tldv.date}</div>}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ fontSize: 11, color: allDone ? color : "rgba(255,255,255,0.3)", fontWeight: 600 }}>{doneCount}/{checklist.length}</div>
+          <div style={{ width: 50, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+            <div style={{ height: "100%", width: (doneCount/checklist.length*100) + "%", background: color, borderRadius: 99 }} />
+          </div>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{expanded ? "▲" : "▼"}</span>
+        </div>
+      </div>
+
+      {/* Содержимое слота */}
+      {expanded && (
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          {/* TL;DV */}
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+            {tldv && tldv.url ? (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <a href={tldv.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#FBBF24", textDecoration: "none", fontWeight: 600 }}>
+                    🎬 {tldv.url.length > 55 ? tldv.url.slice(0, 55) + "..." : tldv.url}
+                  </a>
+                  {tldv.desc && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 4 }}>📝 {tldv.desc}</div>}
+                  {tldv.note && <div style={{ fontSize: 11, color: "#34D399", background: "rgba(52,211,153,0.08)", borderRadius: 6, padding: "4px 8px", marginTop: 5 }}>✨ {tldv.note}</div>}
+                </div>
+                <button onClick={function() { onDeleteTldv(); }} style={{ color: "#F87171", background: "none", border: "none", cursor: "pointer", fontSize: 12, flexShrink: 0 }}>✕</button>
+              </div>
+            ) : (
+              showTldvForm ? (
+                <div>
+                  {[{ label: "Ссылка TL;DV *", key: "url", ph: "https://tldv.io/..." }, { label: "Описание сессии", key: "desc", ph: "Страт-сессия №1..." }, { label: "Заметка для резюме", key: "note", ph: "Ключевые инсайты..." }].map(function(f) {
+                    return (
+                      <div key={f.key} style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginBottom: 3 }}>{f.label}</div>
+                        <input value={form[f.key]} onChange={function(e) { var v = e.target.value; setForm(function(p) { var n = Object.assign({}, p); n[f.key] = v; return n; }); }}
+                          placeholder={f.ph} style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "7px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "inherit" }} />
+                      </div>
+                    );
+                  })}
+                  <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                    <button onClick={handleAddTldv} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#FBBF24", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Сохранить</button>
+                    <button onClick={function() { setShowTldvForm(false); }} style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.05)", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Отмена</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={function() { setShowTldvForm(true); }} style={{ fontSize: 11, color: "#FBBF24", background: "rgba(251,191,36,0.08)", border: "1px dashed rgba(251,191,36,0.3)", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>
+                  🎬 Прикрепить TL;DV запись
+                </button>
+              )
+            )}
+          </div>
+
+          {/* Чеклист */}
+          <div>
+            <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 16px 4px" }}>
+              <button onClick={function() {
+                checklist.forEach(function(it) { onToggle(slotType + slotIndex + "_" + it.id, !allDone); });
+              }} style={{ fontSize: 10, color: color, background: "none", border: "none", cursor: "pointer" }}>
+                {allDone ? "Снять все" : "Отметить все ✓"}
+              </button>
+            </div>
+            {checklist.map(function(item, i) {
+              var key = clientId + "_" + slotType + slotIndex + "_" + item.id;
+              var done = !!checks[key];
+              return (
+                <div key={item.id} onClick={function() { onToggle(slotType + slotIndex + "_" + item.id, !done); }}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 16px", borderTop: "1px solid rgba(255,255,255,0.03)", cursor: "pointer", background: done ? color + "06" : "transparent" }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 5, border: "1.5px solid " + (done ? color : "rgba(255,255,255,0.12)"), background: done ? color : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                    {done && <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize: 12, color: done ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.7)", textDecoration: done ? "line-through" : "none", lineHeight: 1.5 }}>{item.text}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
+function MentorView({ currentUser, isCurator }) {
+  var roleColor = "#F472B6";
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [activeTab, setActiveTab] = useState("strategy");
+  const [checks, setChecks] = useState({});
+  const [tldvData, setTldvData] = useState({});   // clientId_type_index → {url, desc, note, date}
+  const [extraSlots, setExtraSlots] = useState({}); // clientId → {strategy: N, mock: N}
+  const [notes, setNotes] = useState({});
+  const [editNote, setEditNote] = useState(null);
+  const [noteDraft, setNoteDraft] = useState("");
+
+  function storageKey() { return "mentor_v2_" + currentUser.email; }
+
+  function saveLocal(c, t, e, n) {
+    localStorage.setItem(storageKey(), JSON.stringify({
+      checks: c || checks, tldv: t || tldvData,
+      extra: e || extraSlots, notes: n || notes
+    }));
+  }
+
+  useEffect(function() {
+    sbLoadClients().then(function(data) {
+      if (data) {
+        var mine = isCurator
+          ? data.clients
+          : data.clients.filter(function(c) { return c.mentor === currentUser.name || c.mentor === currentUser.email; });
+        setClients(mine);
+      }
+      var saved = localStorage.getItem(storageKey());
+      if (saved) {
+        var p = JSON.parse(saved);
+        setChecks(p.checks || {});
+        setTldvData(p.tldv || {});
+        setExtraSlots(p.extra || {});
+        setNotes(p.notes || {});
+      }
+      setLoading(false);
+    }).catch(function() { setLoading(false); });
+  }, []);
+
+  function toggleCheck(clientId, key, val) {
+    var fullKey = clientId + "_" + key;
+    var n = Object.assign({}, checks);
+    n[fullKey] = val;
+    setChecks(n);
+    saveLocal(n, null, null, null);
+  }
+
+  function saveTldv(clientId, type, index, entry) {
+    var key = clientId + "_" + type + "_" + index;
+    var n = Object.assign({}, tldvData);
+    n[key] = entry;
+    setTldvData(n);
+    saveLocal(null, n, null, null);
+  }
+
+  function deleteTldv(clientId, type, index) {
+    var key = clientId + "_" + type + "_" + index;
+    var n = Object.assign({}, tldvData);
+    delete n[key];
+    setTldvData(n);
+    saveLocal(null, n, null, null);
+  }
+
+  function addExtraSlot(clientId, type) {
+    var cur = extraSlots[clientId] || {};
+    var n = Object.assign({}, extraSlots);
+    n[clientId] = Object.assign({}, cur, { [type]: (cur[type] || 0) + 1 });
+    setExtraSlots(n);
+    saveLocal(null, null, n, null);
+  }
+
+  function getSlotCount(client, type) {
+    var tariff = (client.tariff || "default").replace(/-/g, "-");
+    var base = (TARIFF_SESSIONS[tariff] || TARIFF_SESSIONS["default"])[type] || 1;
+    var extra = (extraSlots[client.id] || {})[type] || 0;
+    return base + extra;
+  }
+
+  function isSlotLocked(clientId, type, index, checklist) {
+    if (index === 0) return false;
+    var prevItems = checklist;
+    var prevDone = prevItems.every(function(it) {
+      return checks[clientId + "_" + type + (index - 1) + "_" + it.id];
+    });
+    return !prevDone;
+  }
+
+  function saveNote(clientId) {
+    var n = Object.assign({}, notes);
+    n[clientId] = noteDraft;
+    setNotes(n);
+    saveLocal(null, null, null, n);
+    setEditNote(null);
+  }
+
+  if (loading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, gap: 12 }}>
+      <div style={{ width: 20, height: 20, border: "2px solid rgba(244,114,182,0.3)", borderTop: "2px solid #F472B6", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Загружаем клиентов...</span>
+    </div>
+  );
+
+  // ── Детальная карточка ──
+  if (selected) {
+    var stratCount = getSlotCount(selected, "strategy");
+    var mockCount = getSlotCount(selected, "mock");
+    var clientNote = notes[selected.id] || "";
+
+    return (
+      <div style={{ maxWidth: 800 }}>
+        <button onClick={function() { setSelected(null); }} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, marginBottom: 20 }}>← Назад</button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+          <div style={{ width: 46, height: 46, borderRadius: "50%", background: "linear-gradient(135deg,#F472B6,#A78BFA)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 18 }}>{selected.name.charAt(0)}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#fff" }}>{selected.name}</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{(selected.tariff || "").toUpperCase()} · {selected.status}</div>
+          </div>
+        </div>
+
+        {/* Вкладки */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+          {[
+            { id: "strategy", label: "Страт-сессии", icon: "🎯", color: "#A78BFA", count: stratCount },
+            { id: "mock", label: "Моки", icon: "🎤", color: "#FBBF24", count: mockCount },
+            { id: "linkedin", label: "LinkedIn", icon: "🔗", color: "#34D399" },
+            { id: "checkin", label: "Чекапы", icon: "✅", color: "#67E8F9" },
+          ].map(function(tab) {
+            var active = activeTab === tab.id;
+            return (
+              <button key={tab.id} onClick={function() { setActiveTab(tab.id); }}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: active ? "1px solid " + tab.color + "60" : "1px solid rgba(255,255,255,0.08)", background: active ? tab.color + "18" : "rgba(255,255,255,0.03)", color: active ? tab.color : "rgba(255,255,255,0.4)", fontWeight: active ? 700 : 400, fontSize: 13, cursor: "pointer" }}>
+                {tab.icon} {tab.label}
+                {tab.count && <span style={{ fontSize: 10, background: active ? tab.color + "30" : "rgba(255,255,255,0.08)", color: active ? tab.color : "rgba(255,255,255,0.3)", padding: "1px 6px", borderRadius: 10 }}>{tab.count}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Страт-сессии со слотами */}
+        {activeTab === "strategy" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {Array.from({ length: stratCount }, function(_, i) {
+              return (
+                <SlotCard key={i} slotType="strategy" slotIndex={i} slotNum={i + 1}
+                  clientId={selected.id} checks={checks}
+                  onToggle={function(key, val) { toggleCheck(selected.id, key, val); }}
+                  tldv={tldvData[selected.id + "_strategy_" + i]}
+                  onSaveTldv={function(entry) { saveTldv(selected.id, "strategy", i, entry); }}
+                  onDeleteTldv={function() { deleteTldv(selected.id, "strategy", i); }}
+                  isLocked={isSlotLocked(selected.id, "strategy", i, SESSION_CHECKLIST)}
+                  isCurator={isCurator} />
+              );
+            })}
+            {(isCurator || currentUser.role === "admin") && (
+              <button onClick={function() { addExtraSlot(selected.id, "strategy"); }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px", borderRadius: 10, border: "1px dashed rgba(167,139,250,0.35)", background: "rgba(167,139,250,0.04)", color: "#A78BFA", fontSize: 12, cursor: "pointer" }}>
+                + Добавить оплаченную страт-сессию
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Моки со слотами */}
+        {activeTab === "mock" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {Array.from({ length: mockCount }, function(_, i) {
+              return (
+                <SlotCard key={i} slotType="mock" slotIndex={i} slotNum={i + 1}
+                  clientId={selected.id} checks={checks}
+                  onToggle={function(key, val) { toggleCheck(selected.id, key, val); }}
+                  tldv={tldvData[selected.id + "_mock_" + i]}
+                  onSaveTldv={function(entry) { saveTldv(selected.id, "mock", i, entry); }}
+                  onDeleteTldv={function() { deleteTldv(selected.id, "mock", i); }}
+                  isLocked={isSlotLocked(selected.id, "mock", i, MOCK_CHECKLIST)}
+                  isCurator={isCurator} />
+              );
+            })}
+            {(isCurator || currentUser.role === "admin") && (
+              <button onClick={function() { addExtraSlot(selected.id, "mock"); }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px", borderRadius: 10, border: "1px dashed rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.04)", color: "#FBBF24", fontSize: 12, cursor: "pointer" }}>
+                + Добавить оплаченный мок
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* LinkedIn */}
+        {activeTab === "linkedin" && (
+          <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(52,211,153,0.15)", borderRadius: 14, overflow: "hidden" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(52,211,153,0.05)" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#34D399" }}>🔗 LinkedIn чеклист</div>
+              <button onClick={function() {
+                var allDone = MENTOR_CHECKLISTS.linkedin.items.every(function(it) { return checks[selected.id + "_li_" + it.id]; });
+                var n = Object.assign({}, checks);
+                MENTOR_CHECKLISTS.linkedin.items.forEach(function(it) { n[selected.id + "_li_" + it.id] = !allDone; });
+                setChecks(n); saveLocal(n, null, null, null);
+              }} style={{ fontSize: 11, color: "#34D399", background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", borderRadius: 6, padding: "4px 12px", cursor: "pointer" }}>Отметить все ✓</button>
+            </div>
+            {MENTOR_CHECKLISTS.linkedin.items.map(function(item, i) {
+              var key = selected.id + "_li_" + item.id;
+              var done = !!checks[key];
+              return (
+                <div key={item.id} onClick={function() { var n = Object.assign({}, checks); n[key] = !done; setChecks(n); saveLocal(n, null, null, null); }}
+                  style={{ display: "flex", gap: 10, padding: "11px 18px", borderTop: i > 0 ? "1px solid rgba(255,255,255,0.03)" : "none", cursor: "pointer", background: done ? "rgba(52,211,153,0.05)" : "transparent" }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 5, border: "1.5px solid " + (done ? "#34D399" : "rgba(255,255,255,0.12)"), background: done ? "#34D399" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                    {done && <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize: 12, color: done ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.7)", textDecoration: done ? "line-through" : "none", lineHeight: 1.5 }}>{item.text}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Чекапы */}
+        {activeTab === "checkin" && (
+          <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(103,232,249,0.15)", borderRadius: 14, overflow: "hidden" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(103,232,249,0.05)" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#67E8F9" }}>✅ Чекап чеклист</div>
+              <button onClick={function() {
+                var allDone = MENTOR_CHECKLISTS.checkin.items.every(function(it) { return checks[selected.id + "_ch_" + it.id]; });
+                var n = Object.assign({}, checks);
+                MENTOR_CHECKLISTS.checkin.items.forEach(function(it) { n[selected.id + "_ch_" + it.id] = !allDone; });
+                setChecks(n); saveLocal(n, null, null, null);
+              }} style={{ fontSize: 11, color: "#67E8F9", background: "rgba(103,232,249,0.1)", border: "1px solid rgba(103,232,249,0.3)", borderRadius: 6, padding: "4px 12px", cursor: "pointer" }}>Отметить все ✓</button>
+            </div>
+            {MENTOR_CHECKLISTS.checkin.items.map(function(item, i) {
+              var key = selected.id + "_ch_" + item.id;
+              var done = !!checks[key];
+              return (
+                <div key={item.id} onClick={function() { var n = Object.assign({}, checks); n[key] = !done; setChecks(n); saveLocal(n, null, null, null); }}
+                  style={{ display: "flex", gap: 10, padding: "11px 18px", borderTop: i > 0 ? "1px solid rgba(255,255,255,0.03)" : "none", cursor: "pointer", background: done ? "rgba(103,232,249,0.05)" : "transparent" }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 5, border: "1.5px solid " + (done ? "#67E8F9" : "rgba(255,255,255,0.12)"), background: done ? "#67E8F9" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                    {done && <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize: 12, color: done ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.7)", textDecoration: done ? "line-through" : "none", lineHeight: 1.5 }}>{item.text}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Заметки */}
+        <div style={{ marginTop: 16, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 18px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px" }}>📝 Заметки ментора</div>
+            {editNote !== selected.id
+              ? <button onClick={function() { setEditNote(selected.id); setNoteDraft(clientNote); }} style={{ fontSize: 11, color: roleColor, background: "none", border: "none", cursor: "pointer" }}>✏️ Редактировать</button>
+              : <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={function() { saveNote(selected.id); }} style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: roleColor, border: "none", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>Сохранить</button>
+                  <button onClick={function() { setEditNote(null); }} style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer" }}>Отмена</button>
+                </div>
+            }
+          </div>
+          {editNote === selected.id
+            ? <textarea value={noteDraft} onChange={function(e) { setNoteDraft(e.target.value); }} placeholder="Заметки, инсайты, что передать куратору..."
+                style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit", resize: "vertical", minHeight: 100, lineHeight: 1.6 }} />
+            : <div style={{ fontSize: 13, color: clientNote ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.2)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{clientNote || "Заметок пока нет"}</div>
+          }
+        </div>
+      </div>
+    );
+  }
+
+  // ── Список клиентов ──
+  return (
+    <div style={{ maxWidth: 800 }}>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>🧠 {isCurator ? "Клиенты (вид ментора)" : "Мои клиенты"}</h1>
+        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Страт-сессии, моки, LinkedIn и TL;DV по каждому менти</p>
+      </div>
+      {clients.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Клиенты не назначены</div>
+          <div style={{ fontSize: 13 }}>Куратор назначит тебя на клиентов — они появятся здесь</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {clients.map(function(client) {
+            var sCount = getSlotCount(client, "strategy");
+            var mCount = getSlotCount(client, "mock");
+            return (
+              <div key={client.id} onClick={function() { setSelected(client); setActiveTab("strategy"); }}
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(244,114,182,0.15)", borderRadius: 14, padding: "16px 18px", cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={function(e) { e.currentTarget.style.borderColor = "rgba(244,114,182,0.4)"; }}
+                onMouseLeave={function(e) { e.currentTarget.style.borderColor = "rgba(244,114,182,0.15)"; }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#F472B6,#A78BFA)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15 }}>{client.name.charAt(0)}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{client.name}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{(client.tariff || "").toUpperCase()}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <span style={{ fontSize: 11, color: "#A78BFA", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)", padding: "2px 8px", borderRadius: 20 }}>🎯 {sCount} сессий</span>
+                    <span style={{ fontSize: 11, color: "#FBBF24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", padding: "2px 8px", borderRadius: 20 }}>🎤 {mCount} моков</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 function SalesView({ currentUser }) {
   return (
     <div style={{ maxWidth: 700, padding: "40px 0" }}>
