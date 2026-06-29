@@ -1805,6 +1805,16 @@ const GANTT_PHASES = [
 ];
 const TOTAL_DAYS = 60;
 
+// Автоматический переход статуса при завершении фазы
+// "learning" и дальше — только вручную
+const PHASE_AUTO_STATUS = {
+  onboarding: "resume",       // Онбординг → Резюме
+  resume:     "linkedin",     // Резюме → LinkedIn
+  linkedin:   "automation",   // LinkedIn → Автоматизация
+  automation: "learning",     // Автоматизация → Обучение и подачи
+  extras:     null,           // Собесы — вручную
+};
+
 const STATUS_STAGES = [
   { id: "strategy",    label: "Стратегия",             icon: "🎯", color: "#A78BFA" },
   { id: "resume",      label: "Резюме",                 icon: "📄", color: "#F472B6" },
@@ -1994,9 +2004,46 @@ function ClientsView({ currentUser }) {
   function toggleCheck(clientId, itemId) {
     var key = clientId + "_" + itemId;
     setCheckedMap(function(p) {
-      var n = Object.assign({}, p); n[key] = !p[key];
+      var n = Object.assign({}, p);
+      n[key] = !p[key];
+
+      // Проверяем — завершилась ли фаза целиком
       var client = clients.find(function(c) { return c.id === clientId; });
-      if (client) setTimeout(function() { sbSaveClient(client, n, commentsMap); }, 300);
+      if (client && n[key]) {
+        var cl = TARIFF_CHECKLISTS[client.tariff] || {};
+        GANTT_PHASES.forEach(function(ph) {
+          var nextStatus = PHASE_AUTO_STATUS[ph.key];
+          if (!nextStatus) return; // нет автоперехода
+          var phItems = cl[ph.key] || [];
+          if (!phItems.length) return;
+          var allDone = phItems.every(function(it) { return n[clientId + "_" + it.id]; });
+          if (allDone) {
+            // Двигаем только вперёд по воронке
+            var statusOrder = ["strategy","resume","linkedin","automation","learning","interviews","offer","offer_fee"];
+            var curIdx = statusOrder.indexOf(client.status);
+            var nextIdx = statusOrder.indexOf(nextStatus);
+            if (nextIdx > curIdx) {
+              setClients(function(prev) {
+                var updated = prev.map(function(c) {
+                  return c.id === clientId ? Object.assign({}, c, { status: nextStatus }) : c;
+                });
+                var updClient = updated.find(function(c) { return c.id === clientId; });
+                if (updClient) sbSaveClient(updClient, n, commentsMap);
+                return updated;
+              });
+              if (selected && selected.id === clientId) {
+                setSelected(function(s) { return Object.assign({}, s, { status: nextStatus }); });
+              }
+            }
+          }
+        });
+      }
+
+      var cl2 = selected ? TARIFF_CHECKLISTS[selected.tariff] : null;
+      if (cl2) {
+        var updClient2 = clients.find(function(c) { return c.id === clientId; });
+        if (updClient2) setTimeout(function() { sbSaveClient(updClient2, n, commentsMap); }, 300);
+      }
       return n;
     });
   }
@@ -2010,6 +2057,31 @@ function ClientsView({ currentUser }) {
     setCheckedMap(function(p) {
       var n = Object.assign({}, p);
       items.forEach(function(it) { n[clientId + "_" + it.id] = !allDone; });
+
+      // Если отмечаем все → проверяем автопереход
+      if (!allDone) {
+        var nextStatus = PHASE_AUTO_STATUS[phaseKey];
+        if (nextStatus) {
+          var client = clients.find(function(c) { return c.id === clientId; });
+          if (client) {
+            var statusOrder = ["strategy","resume","linkedin","automation","learning","interviews","offer","offer_fee"];
+            var curIdx = statusOrder.indexOf(client.status);
+            var nextIdx = statusOrder.indexOf(nextStatus);
+            if (nextIdx > curIdx) {
+              setClients(function(prev) {
+                var updated = prev.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: nextStatus }) : c; });
+                var updClient = updated.find(function(c) { return c.id === clientId; });
+                if (updClient) sbSaveClient(updClient, n, commentsMap);
+                return updated;
+              });
+              if (selected && selected.id === clientId) {
+                setSelected(function(s) { return Object.assign({}, s, { status: nextStatus }); });
+              }
+            }
+          }
+        }
+      }
+
       var client = clients.find(function(c) { return c.id === clientId; });
       if (client) setTimeout(function() { sbSaveClient(client, n, commentsMap); }, 300);
       return n;
@@ -2454,6 +2526,89 @@ function ClientsView({ currentUser }) {
             📝 {selected.notes}
           </div>
         ) : null}
+
+        {/* ── Блоки ментора ─────────────────────────────────────── */}
+        {(function() {
+          // Собираем данные всех менторов из localStorage
+          var mentorData = { tldv: {}, notes: {} };
+          STAFF.filter(function(s) { return s.role === "mentor"; }).forEach(function(s) {
+            try {
+              var d = localStorage.getItem("mentor_v2_" + s.email);
+              if (d) {
+                var p = JSON.parse(d);
+                Object.assign(mentorData.tldv, p.tldv || {});
+                Object.assign(mentorData.notes, p.notes || {});
+              }
+            } catch(e) {}
+          });
+
+          var clientNote = mentorData.notes[selected.id] || "";
+
+          // Группируем TL;DV по типу сессии
+          var stratTldv = [], mockTldv = [];
+          Object.keys(mentorData.tldv).forEach(function(k) {
+            if (!k.startsWith(selected.id + "_")) return;
+            var entry = mentorData.tldv[k];
+            if (k.includes("_strategy_")) stratTldv.push({ key: k, entry: entry, num: parseInt(k.match(/_(\d+)$/)?.[1] || 0) + 1 });
+            else if (k.includes("_mock_")) mockTldv.push({ key: k, entry: entry, num: parseInt(k.match(/_(\d+)$/)?.[1] || 0) + 1 });
+          });
+          stratTldv.sort(function(a, b) { return a.num - b.num; });
+          mockTldv.sort(function(a, b) { return a.num - b.num; });
+
+          var hasAnyData = stratTldv.length > 0 || mockTldv.length > 0 || clientNote;
+          if (!hasAnyData) return null;
+
+          function TldvEntry({ item, color }) {
+            var e = item.entry;
+            return (
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 9, padding: "11px 14px", marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: color }}>#{item.num}</span>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{e.date}</span>
+                </div>
+                <a href={e.url} target="_blank" rel="noreferrer"
+                  style={{ fontSize: 12, color: "#FBBF24", textDecoration: "none", display: "block", marginBottom: e.desc || e.note ? 6 : 0, wordBreak: "break-all" }}>
+                  🎬 {e.url.length > 65 ? e.url.slice(0, 65) + "..." : e.url}
+                </a>
+                {e.desc && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: e.note ? 5 : 0 }}>📝 {e.desc}</div>}
+                {e.note && <div style={{ fontSize: 12, color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.15)", borderRadius: 6, padding: "5px 9px" }}>✨ Для резюме: {e.note}</div>}
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 12 }}>🧠 Материалы от ментора</div>
+              <div style={{ display: "grid", gridTemplateColumns: stratTldv.length && mockTldv.length ? "1fr 1fr" : "1fr", gap: 12 }}>
+
+                {/* Страт-сессии */}
+                {stratTldv.length > 0 && (
+                  <div style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 13, padding: "14px 16px" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#A78BFA", marginBottom: 12 }}>🎯 Страт-сессии ({stratTldv.length})</div>
+                    {stratTldv.map(function(item) { return <TldvEntry key={item.key} item={item} color="#A78BFA" />; })}
+                  </div>
+                )}
+
+                {/* Моки */}
+                {mockTldv.length > 0 && (
+                  <div style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 13, padding: "14px 16px" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#FBBF24", marginBottom: 12 }}>🎤 Моки ({mockTldv.length})</div>
+                    {mockTldv.map(function(item) { return <TldvEntry key={item.key} item={item} color="#FBBF24" />; })}
+                  </div>
+                )}
+              </div>
+
+              {/* Заметки ментора */}
+              {clientNote && (
+                <div style={{ marginTop: 12, background: "rgba(244,114,182,0.05)", border: "1px solid rgba(244,114,182,0.2)", borderRadius: 13, padding: "14px 16px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#F472B6", marginBottom: 8 }}>📝 Заметки ментора</div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{clientNote}</div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         </div>)} {/* end progress tab */}
       </div>
     );
