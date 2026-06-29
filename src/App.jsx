@@ -1945,6 +1945,7 @@ function ClientsView({ currentUser }) {
   const [filterStatus, setFilterStatus] = useState("Все");
   const [filterTariff, setFilterTariff] = useState("Все");
   const [filterDays, setFilterDays] = useState("Все");
+  const [filterMentor, setFilterMentor] = useState("Все");
   const [openStatusMenu, setOpenStatusMenu] = useState(null);
   const [search, setSearch] = useState("");
 
@@ -2078,10 +2079,12 @@ function ClientsView({ currentUser }) {
   }
 
   var allCurators = ["Все"].concat(CURATORS);
+  var allMentors = ["Все"].concat(Array.from(new Set(clients.map(function(c) { return c.mentor; }).filter(Boolean))));
   var filtered = clients.filter(function(c) {
     var curOk = filterCurator === "Все" || c.curator === filterCurator;
     var stOk  = filterStatus === "Все" || c.status === filterStatus;
     var tarOk = filterTariff === "Все" || c.tariff === filterTariff;
+    var mentorOk = filterMentor === "Все" || c.mentor === filterMentor;
     var daysLeft = 180 - daysSinceStart(c);
     var daysOk = filterDays === "Все" ||
       (filterDays === "urgent" && daysLeft <= 14 && daysLeft > 0) ||
@@ -2089,7 +2092,7 @@ function ClientsView({ currentUser }) {
       (filterDays === "ok" && daysLeft > 30) ||
       (filterDays === "over" && daysLeft <= 0);
     var searchOk = search === "" || c.name.toLowerCase().indexOf(search.toLowerCase()) >= 0;
-    return curOk && stOk && tarOk && daysOk && searchOk;
+    return curOk && stOk && tarOk && mentorOk && daysOk && searchOk;
   });
 
   // ── Detail view (Gantt + checklist) ──────────────────────────────────────
@@ -2100,32 +2103,113 @@ function ClientsView({ currentUser }) {
     var pct = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
     var elapsed = Math.min(daysSinceStart(selected), TOTAL_DAYS);
 
+    // Данные ментора из localStorage
+    var mentorKey = null;
+    STAFF.forEach(function(s) { if (s.role === "mentor" || s.role === "admin") { if (!mentorKey) mentorKey = "mentor_v2_" + s.email; } });
+    var mentorStorageKeys = STAFF.filter(function(s) { return s.role === "mentor"; }).map(function(s) { return "mentor_v2_" + s.email; });
+    var allMentorData = {};
+    mentorStorageKeys.forEach(function(k) {
+      try { var d = localStorage.getItem(k); if (d) { var p = JSON.parse(d); Object.assign(allMentorData, { checks: Object.assign({}, allMentorData.checks, p.checks), tldv: Object.assign({}, allMentorData.tldv, p.tldv), notes: Object.assign({}, allMentorData.notes, p.notes), extra: Object.assign({}, allMentorData.extra, p.extra) }); } } catch(e) {}
+    });
+    var clientTldvEntries = [];
+    var tldvData = allMentorData.tldv || {};
+    Object.keys(tldvData).forEach(function(k) {
+      if (k.startsWith(selected.id + "_")) clientTldvEntries.push({ key: k, entry: tldvData[k] });
+    });
+    var clientMentorNote = (allMentorData.notes || {})[selected.id] || "";
+
     return (
       <div style={{ maxWidth: 1100 }}>
         {/* Back + header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={function() { setSelected(null); setActivePhase(null); }}
             style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, padding: "5px 0" }}>← Назад</button>
           <span style={{ color: "rgba(255,255,255,0.15)" }}>|</span>
           <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{selected.name}</div>
           <span style={{ fontSize: 11, color: tarColor, background: tarColor + "18", border: "1px solid " + tarColor + "33", padding: "3px 10px", borderRadius: 20, fontWeight: 700 }}>{TARIFF_LABELS[selected.tariff]}</span>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.06)", padding: "3px 10px", borderRadius: 20 }}>👤 {selected.curator}</span>
+          {selected.mentor && <span style={{ fontSize: 11, color: "#F472B6", background: "rgba(244,114,182,0.1)", padding: "3px 10px", borderRadius: 20 }}>🧠 {selected.mentor}</span>}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "4px 10px" }}>
             <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>📅 Старт:</span>
-            <input
-              type="date"
-              value={selected.startDate}
+            <input type="date" value={selected.startDate}
               onChange={function(e) {
                 var newDate = e.target.value;
-                setClients(function(p) {
-                  return p.map(function(c) { return c.id === selected.id ? Object.assign({}, c, { startDate: newDate }) : c; });
-                });
+                setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? Object.assign({}, c, { startDate: newDate }) : c; }); });
                 setSelected(function(s) { return Object.assign({}, s, { startDate: newDate }); });
               }}
-              style={{ background: "transparent", border: "none", color: "#fff", fontSize: 12, fontWeight: 600, outline: "none", cursor: "pointer", fontFamily: "inherit" }}
-            />
+              style={{ background: "transparent", border: "none", color: "#fff", fontSize: 12, fontWeight: 600, outline: "none", cursor: "pointer", fontFamily: "inherit" }} />
           </div>
         </div>
+
+        {/* Вкладки детального просмотра */}
+        {(function() {
+          var detailTabs = [
+            { id: "progress", label: "Прогресс", icon: "📊" },
+            { id: "mentor", label: "Ментор", icon: "🧠", badge: clientTldvEntries.length > 0 ? clientTldvEntries.length : null },
+          ];
+          var curDetailTab = selected._detailTab || "progress";
+          return (
+            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+              {detailTabs.map(function(tab) {
+                var active = curDetailTab === tab.id;
+                return (
+                  <button key={tab.id} onClick={function() { setSelected(function(s) { return Object.assign({}, s, { _detailTab: tab.id }); }); }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: active ? "1px solid rgba(167,139,250,0.4)" : "1px solid rgba(255,255,255,0.08)", background: active ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.03)", color: active ? "#A78BFA" : "rgba(255,255,255,0.4)", fontWeight: active ? 700 : 400, fontSize: 13, cursor: "pointer" }}>
+                    {tab.icon} {tab.label}
+                    {tab.badge && <span style={{ fontSize: 10, background: "rgba(251,191,36,0.2)", color: "#FBBF24", padding: "1px 6px", borderRadius: 10 }}>{tab.badge}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {/* Вкладка Ментор */}
+        {(selected._detailTab === "mentor") && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* TL;DV */}
+            <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: 14, padding: "16px 18px" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#FBBF24", marginBottom: 12 }}>🎬 TL;DV записи</div>
+              {clientTldvEntries.length === 0 ? (
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>Ментор ещё не добавил записи</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {clientTldvEntries.map(function(item) {
+                    var e = item.entry;
+                    var typeLabel = item.key.includes("_strategy_") ? "🎯 Страт-сессия" : item.key.includes("_mock_") ? "🎤 Мок" : "📌";
+                    var slotNum = item.key.match(/_(\d+)$/) ? parseInt(item.key.match(/_(\d+)$/)[1]) + 1 : "";
+                    return (
+                      <div key={item.key} style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: 10, padding: "12px 14px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                          <span style={{ fontSize: 11, color: "#FBBF24", fontWeight: 600 }}>{typeLabel} #{slotNum}</span>
+                          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{e.date}</span>
+                        </div>
+                        <a href={e.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#FBBF24", textDecoration: "none", display: "block", marginBottom: 4, wordBreak: "break-all" }}>
+                          🔗 {e.url.length > 60 ? e.url.slice(0, 60) + "..." : e.url}
+                        </a>
+                        {e.desc && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>📝 {e.desc}</div>}
+                        {e.note && <div style={{ fontSize: 12, color: "#34D399", background: "rgba(52,211,153,0.08)", borderRadius: 6, padding: "5px 9px" }}>✨ Для резюме: {e.note}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Заметки ментора */}
+            <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(244,114,182,0.15)", borderRadius: 14, padding: "16px 18px" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#F472B6", marginBottom: 10 }}>📝 Заметки ментора</div>
+              {clientMentorNote ? (
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{clientMentorNote}</div>
+              ) : (
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>Ментор ещё не добавил заметки</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Вкладка Прогресс (весь старый контент) */}
+        {(!selected._detailTab || selected._detailTab === "progress") && (<div>
 
         {/* Status funnel strip */}
         <div style={{ display: "flex", gap: 3, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
@@ -2370,6 +2454,7 @@ function ClientsView({ currentUser }) {
             📝 {selected.notes}
           </div>
         ) : null}
+        </div>)} {/* end progress tab */}
       </div>
     );
   }
@@ -2515,6 +2600,10 @@ function ClientsView({ currentUser }) {
           style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
           {allCurators.map(function(c) { return <option key={c} value={c}>{c === "Все" ? "Все кураторы" : "👤 " + c}</option>; })}
         </select>
+        <select value={filterMentor} onChange={function(e) { setFilterMentor(e.target.value); }}
+          style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
+          {allMentors.map(function(m) { return <option key={m} value={m}>{m === "Все" ? "Все менторы" : "🧠 " + m}</option>; })}
+        </select>
         <select value={filterTariff} onChange={function(e) { setFilterTariff(e.target.value); }}
           style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
           <option value="Все">Все тарифы</option>
@@ -2532,8 +2621,8 @@ function ClientsView({ currentUser }) {
           <option value="ok">✅ В норме (30+ дн.)</option>
           <option value="over">🏁 Завершена</option>
         </select>
-        {(filterCurator !== "Все" || filterStatus !== "Все" || filterTariff !== "Все" || filterDays !== "Все" || search !== "") ? (
-          <button onClick={function() { setFilterCurator("Все"); setFilterStatus("Все"); setFilterTariff("Все"); setFilterDays("Все"); setSearch(""); }}
+        {(filterCurator !== "Все" || filterStatus !== "Все" || filterTariff !== "Все" || filterDays !== "Все" || filterMentor !== "Все" || search !== "") ? (
+          <button onClick={function() { setFilterCurator("Все"); setFilterStatus("Все"); setFilterTariff("Все"); setFilterDays("Все"); setFilterMentor("Все"); setSearch(""); }}
             style={{ fontSize: 12, color: "#F87171", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 9, padding: "8px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>
             ✕ Сбросить всё
           </button>
