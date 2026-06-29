@@ -1988,10 +1988,12 @@ function ClientsView({ currentUser }) {
       id: "c" + Date.now(), name: form.name.trim(), tariff: form.tariff,
       curator: form.curator, startDate: form.startDate,
       status: form.status, notes: form.notes,
+      mentor: form.mentor || "",
+      assistant: "", workEmail: "", workPassword: "", resumeUrl: "", totalApps: 0, doneApps: 0,
     };
     sbSaveClient(newClient, {}, {});
     setClients(function(p) { return p.concat([newClient]); });
-    setForm({ name: "", tariff: "take-all", curator: currentUser ? currentUser.name : "Ксюша", startDate: new Date().toISOString().slice(0, 10), status: "strategy", notes: "" });
+    setForm({ name: "", tariff: "take-all", curator: currentUser ? currentUser.name : "Ксюша", startDate: new Date().toISOString().slice(0, 10), status: "strategy", notes: "", mentor: "" });
     setShowAdd(false);
   }
 
@@ -2201,6 +2203,17 @@ function ClientsView({ currentUser }) {
           <span style={{ fontSize: 11, color: tarColor, background: tarColor + "18", border: "1px solid " + tarColor + "33", padding: "3px 10px", borderRadius: 20, fontWeight: 700 }}>{TARIFF_LABELS[selected.tariff]}</span>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.06)", padding: "3px 10px", borderRadius: 20 }}>👤 {selected.curator}</span>
           {selected.mentor && <span style={{ fontSize: 11, color: "#F472B6", background: "rgba(244,114,182,0.1)", padding: "3px 10px", borderRadius: 20 }}>🧠 {selected.mentor}</span>}
+          {/* Назначить/сменить ментора */}
+          <select value={selected.mentor || ""} onChange={function(e) {
+            var newMentor = e.target.value;
+            setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? Object.assign({}, c, { mentor: newMentor }) : c; }); });
+            setSelected(function(s) { return Object.assign({}, s, { mentor: newMentor }); });
+            var upd = Object.assign({}, selected, { mentor: newMentor });
+            sbSaveClient(upd, checkedMap, commentsMap);
+          }} style={{ fontSize: 11, background: "#1a1535", border: "1px solid rgba(244,114,182,0.3)", borderRadius: 8, padding: "3px 10px", color: selected.mentor ? "#F472B6" : "rgba(255,255,255,0.3)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
+            <option value="">🧠 Назначить ментора</option>
+            {STAFF.filter(function(s) { return s.role === "mentor"; }).map(function(s) { return <option key={s.email} value={s.name}>{s.name}</option>; })}
+          </select>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "4px 10px" }}>
             <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>📅 Старт:</span>
             <input type="date" value={selected.startDate}
@@ -2710,6 +2723,15 @@ function ClientsView({ currentUser }) {
                   {CURATORS.map(function(c) { return <option key={c} value={c}>{c}</option>; })}
                 </select>
               </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 7 }}>Ментор</div>
+              <select value={form.mentor || ""} onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { mentor: v }); }); }}
+                style={{ width: "100%", background: "#1a1535", border: "1px solid rgba(244,114,182,0.25)", borderRadius: 9, padding: "10px 12px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
+                <option value="">— Не назначен</option>
+                {STAFF.filter(function(s) { return s.role === "mentor"; }).map(function(s) { return <option key={s.email} value={s.name}>{s.name}</option>; })}
+              </select>
             </div>
 
             <div style={{ marginBottom: 14 }}>
