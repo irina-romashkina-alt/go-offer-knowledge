@@ -2681,6 +2681,7 @@ function ClientsView({ currentUser }) {
 // ── РОЛИ И ПОЛЬЗОВАТЕЛИ ──────────────────────────────────────────────────────
 
 const ROLE_CONFIG = {
+  admin:     { label: "Админ",      color: "#F472B6", icon: "👑", desc: "Полный доступ ко всем разделам" },
   curator:   { label: "Куратор",    color: "#A78BFA", icon: "🎓", desc: "Полный доступ к базе знаний и клиентам" },
   assistant: { label: "Ассистент",  color: "#34D399", icon: "⚡", desc: "Карточки своих клиентов и задачи по подачам" },
   mentor:    { label: "Ментор",     color: "#F472B6", icon: "🧠", desc: "Страт-сессии, LinkedIn, моки, TL;DV" },
@@ -2688,24 +2689,29 @@ const ROLE_CONFIG = {
   marketing: { label: "Маркетинг", color: "#67E8F9", icon: "📣", desc: "Офферы и кейсы для контента" },
 };
 
-// Список сотрудников с ролями — добавляй новых здесь
 const STAFF = [
+  // Админ — доступ ко всем разделам
+  { email: "irina-romashkina@go-offer.us",    name: "Ирина Ромашкина",    role: "admin" },
+
   // Кураторы
-  { email: "irina-romashkina@go-offer.us",    name: "Ирина Ромашкина",    role: "curator" },
-  { email: "kseniya-belyntseva@go-offer.us",   name: "Ксения Белынцева",   role: "curator" },
-  { email: "aleksandra-sheider@go-offer.us",   name: "Александра Шейдер",  role: "curator" },
-  { email: "kira@go-offer.us",                 name: "Кира",               role: "curator" },
-  { email: "katya@go-offer.us",                name: "Катя",               role: "curator" },
+  { email: "kseniya-belyntseva@go-offer.us",  name: "Ксения Белынцева",   role: "curator" },
+  { email: "aleksandra-sheider@go-offer.us",  name: "Александра Шейдер",  role: "curator" },
+  { email: "kira@go-offer.us",                name: "Кира",               role: "curator" },
+  { email: "katya@go-offer.us",               name: "Катя",               role: "curator" },
+
   // Менторы
-  { email: "anna-gordeeva@go-offer.us",        name: "Анна Гордеева",      role: "mentor" },
-  { email: "kirill-gugaev@go-offer.us",        name: "Кирилл Гугаев",      role: "mentor" },
-  // Ассистенты
-  { email: "assistant1@go-offer.us",           name: "Ассистент 1",        role: "assistant" },
-  { email: "assistant2@go-offer.us",           name: "Ассистент 2",        role: "assistant" },
+  { email: "anna-gordeeva@go-offer.us",       name: "Анна Гордеева",      role: "mentor" },
+  { email: "kirill-gugaev@go-offer.us",       name: "Кирилл Гугаев",      role: "mentor" },
+
+  // Ассистенты — добавляй по мере необходимости
+  { email: "assistant1@go-offer.us",          name: "Ассистент 1",        role: "assistant" },
+  { email: "assistant2@go-offer.us",          name: "Ассистент 2",        role: "assistant" },
+
   // Sales
-  { email: "sales@go-offer.us",               name: "Sales Team",          role: "sales" },
+  { email: "sales@go-offer.us",              name: "Sales Team",          role: "sales" },
+
   // Маркетинг
-  { email: "marketing@go-offer.us",           name: "Marketing Team",      role: "marketing" },
+  { email: "marketing@go-offer.us",          name: "Marketing Team",      role: "marketing" },
 ];
 
 function LoginScreen({ onLogin }) {
@@ -2754,11 +2760,11 @@ function LoginScreen({ onLogin }) {
           <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Вход в систему</div>
           <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 24, lineHeight: 1.5 }}>Доступ только для сотрудников с почтой @go-offer.us</div>
 
-          {/* Role hints */}
+          {/* Role hints — информационные бейджи */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
             {Object.entries(ROLE_CONFIG).map(function([key, r]) {
               return (
-                <div key={key} style={{ fontSize: 10, color: r.color, background: r.color + "15", border: "1px solid " + r.color + "30", padding: "3px 8px", borderRadius: 20, fontWeight: 600 }}>
+                <div key={key} style={{ fontSize: 10, color: r.color, background: r.color + "15", border: "1px solid " + r.color + "30", padding: "3px 10px", borderRadius: 20, fontWeight: 600 }}>
                   {r.icon} {r.label}
                 </div>
               );
@@ -3092,10 +3098,12 @@ export default function App() {
   if (!user) return <LoginScreen onLogin={setUser} />;
 
   // Не-кураторские роли → свои кабинеты
+  // admin видит полный интерфейс как куратор (роль curator тоже)
   if (user.role === "assistant") return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><AssistantView currentUser={user} /></RoleShell>;
   if (user.role === "mentor")    return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><MentorView currentUser={user} /></RoleShell>;
   if (user.role === "sales")     return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><SalesView currentUser={user} /></RoleShell>;
   if (user.role === "marketing") return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><MarketingView currentUser={user} /></RoleShell>;
+  // admin и curator → полный интерфейс
 
   var SW = sidebar ? 210 : 60;
   var labels = { company: "Компания", curator: "Роль куратора", knowledge: "База знаний", tariffs: "Тарифы и продукты", guide: "Гайд", checklist: "Чеклист", clients: "Клиенты", ai: "AI-помощник", links: "Полезные ссылки" };
