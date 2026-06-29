@@ -2947,6 +2947,7 @@ const STAFF = [
   // Менторы
   { email: "anna-gordeeva@go-offer.us",       name: "Анна Гордеева",      role: "mentor" },
   { email: "kirill-gugaev@go-offer.us",       name: "Кирилл Гугаев",      role: "mentor" },
+  { email: "luba-zabavskaya@go-offer.us",     name: "Люба Забавская",     role: "mentor" },
 
   // Ассистенты — добавляй по мере необходимости
   { email: "assistant1@go-offer.us",          name: "Ассистент 1",        role: "assistant" },
