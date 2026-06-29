@@ -1883,7 +1883,7 @@ async function sbLoadClients() {
   var clients = rows.map(function(r) {
     Object.assign(checkedMap, r.checked_map || {});
     Object.assign(commentsMap, r.comments_map || {});
-    return { id: r.id, name: r.name, tariff: r.tariff, curator: r.curator, status: r.status, startDate: r.start_date, notes: r.notes || "" };
+    return { id: r.id, name: r.name, tariff: r.tariff, curator: r.curator, status: r.status, startDate: r.start_date, notes: r.notes || "", assistant: r.assistant || "", workEmail: r.work_email || "", workPassword: r.work_password || "", resumeUrl: r.resume_url || "", totalApps: r.total_apps || 0, doneApps: r.done_apps || 0 };
   });
   return { clients, checkedMap, commentsMap };
 }
@@ -1899,6 +1899,12 @@ async function sbSaveClient(client, checkedMap, commentsMap) {
       curator: client.curator, status: client.status,
       start_date: client.startDate, notes: client.notes || "",
       checked_map: clientChecked, comments_map: clientComments,
+      assistant: client.assistant || "",
+      work_email: client.workEmail || "",
+      work_password: client.workPassword || "",
+      resume_url: client.resumeUrl || "",
+      total_apps: client.totalApps || 0,
+      done_apps: client.doneApps || 0,
     })
   });
 }
@@ -2672,6 +2678,36 @@ function ClientsView({ currentUser }) {
   );
 }
 
+// ── РОЛИ И ПОЛЬЗОВАТЕЛИ ──────────────────────────────────────────────────────
+
+const ROLE_CONFIG = {
+  curator:   { label: "Куратор",    color: "#A78BFA", icon: "🎓", desc: "Полный доступ к базе знаний и клиентам" },
+  assistant: { label: "Ассистент",  color: "#34D399", icon: "⚡", desc: "Карточки своих клиентов и задачи по подачам" },
+  mentor:    { label: "Ментор",     color: "#F472B6", icon: "🧠", desc: "Страт-сессии, LinkedIn, моки, TL;DV" },
+  sales:     { label: "Sales",      color: "#FBBF24", icon: "💼", desc: "Воронка продаж и офферы клиентов" },
+  marketing: { label: "Маркетинг", color: "#67E8F9", icon: "📣", desc: "Офферы и кейсы для контента" },
+};
+
+// Список сотрудников с ролями — добавляй новых здесь
+const STAFF = [
+  // Кураторы
+  { email: "irina-romashkina@go-offer.us",    name: "Ирина Ромашкина",    role: "curator" },
+  { email: "kseniya-belyntseva@go-offer.us",   name: "Ксения Белынцева",   role: "curator" },
+  { email: "aleksandra-sheider@go-offer.us",   name: "Александра Шейдер",  role: "curator" },
+  { email: "kira@go-offer.us",                 name: "Кира",               role: "curator" },
+  { email: "katya@go-offer.us",                name: "Катя",               role: "curator" },
+  // Менторы
+  { email: "anna-gordeeva@go-offer.us",        name: "Анна Гордеева",      role: "mentor" },
+  { email: "kirill-gugaev@go-offer.us",        name: "Кирилл Гугаев",      role: "mentor" },
+  // Ассистенты
+  { email: "assistant1@go-offer.us",           name: "Ассистент 1",        role: "assistant" },
+  { email: "assistant2@go-offer.us",           name: "Ассистент 2",        role: "assistant" },
+  // Sales
+  { email: "sales@go-offer.us",               name: "Sales Team",          role: "sales" },
+  // Маркетинг
+  { email: "marketing@go-offer.us",           name: "Marketing Team",      role: "marketing" },
+];
+
 function LoginScreen({ onLogin }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -2684,11 +2720,14 @@ function LoginScreen({ onLogin }) {
       setError("Доступ только для сотрудников Go Offer (@go-offer.us)");
       return;
     }
+    var staff = STAFF.find(function(s) { return s.email === e; });
+    if (!staff) {
+      setError("Сотрудник не найден. Обратись в общий чат.");
+      return;
+    }
     setLoading(true);
     setTimeout(function() {
-      var name = e.split("@")[0];
-      name = name.charAt(0).toUpperCase() + name.slice(1);
-      onLogin({ email: e, name: name });
+      onLogin({ email: e, name: staff.name, role: staff.role });
       setLoading(false);
     }, 600);
   }
@@ -2698,26 +2737,33 @@ function LoginScreen({ onLogin }) {
   return (
     <div style={{ display: "flex", height: "100vh", background: "#080516", fontFamily: "Inter,-apple-system,sans-serif", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
       <style dangerouslySetInnerHTML={{__html: "* { box-sizing: border-box; margin: 0; padding: 0; } input { font-family: inherit; } button { font-family: inherit; cursor: pointer; } @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }"}} />
-
-      {/* Background */}
       <div style={{ position: "fixed", top: -200, left: -200, width: 600, height: 600, background: "radial-gradient(circle,rgba(167,139,250,0.12),transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "fixed", bottom: -200, right: -100, width: 500, height: 500, background: "radial-gradient(circle,rgba(244,114,182,0.08),transparent 70%)", pointerEvents: "none" }} />
       {[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].map(function(i) {
         return <div key={i} style={{ position: "fixed", left: ((i*47+11)%100)+"%", top: ((i*61+9)%100)+"%", width: (i%3)+1, height: (i%3)+1, background: i%4===0?"#A78BFA":"#fff", borderRadius:"50%", opacity:0.08+(i%4)*0.04, pointerEvents:"none" }} />;
       })}
 
-      <div style={{ width: 400, position: "relative", zIndex: 1 }}>
-        {/* Logo */}
+      <div style={{ width: 420, position: "relative", zIndex: 1, padding: "0 16px" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{ width: 56, height: 56, background: "linear-gradient(135deg,#A78BFA,#F472B6)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px", boxShadow: "0 0 32px rgba(167,139,250,0.4)", animation: "float 3s ease-in-out infinite" }}>🍍</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>Go Offer</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>База знаний для кураторов</div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>Внутренняя платформа</div>
         </div>
 
-        {/* Card */}
         <div style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: "32px 28px" }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Вход в систему</div>
           <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 24, lineHeight: 1.5 }}>Доступ только для сотрудников с почтой @go-offer.us</div>
+
+          {/* Role hints */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
+            {Object.entries(ROLE_CONFIG).map(function([key, r]) {
+              return (
+                <div key={key} style={{ fontSize: 10, color: r.color, background: r.color + "15", border: "1px solid " + r.color + "30", padding: "3px 8px", borderRadius: 20, fontWeight: 600 }}>
+                  {r.icon} {r.label}
+                </div>
+              );
+            })}
+          </div>
 
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>Корпоративная почта</div>
@@ -2732,9 +2778,7 @@ function LoginScreen({ onLogin }) {
             {error ? <div style={{ fontSize: 12, color: "#F87171", marginTop: 7 }}>⚠️ {error}</div> : null}
           </div>
 
-          <button
-            onClick={handleLogin}
-            disabled={loading}
+          <button onClick={handleLogin} disabled={loading}
             style={{ width: "100%", padding: "13px", background: loading ? "rgba(167,139,250,0.4)" : "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 11, fontSize: 14, fontWeight: 700, color: "#fff", cursor: loading ? "default" : "pointer", boxShadow: loading ? "none" : "0 0 24px rgba(167,139,250,0.35)", transition: "all 0.15s" }}>
             {loading ? "Входим..." : "Войти →"}
           </button>
@@ -2744,6 +2788,283 @@ function LoginScreen({ onLogin }) {
           Проблемы со входом? Напиши в общий чат Go Offer
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── КАБИНЕТ АССИСТЕНТА ───────────────────────────────────────────────────────
+
+function AssistantView({ currentUser }) {
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ name: "", tariff: "take-all", startDate: new Date().toISOString().slice(0,10), resumeUrl: "", workEmail: "", workPassword: "", totalApps: 0, doneApps: 0, notes: "" });
+
+  useEffect(function() {
+    sbLoadClients().then(function(data) {
+      if (data) {
+        var mine = data.clients.filter(function(c) { return c.assistant === currentUser.name || c.assistant === currentUser.email; });
+        setClients(mine);
+      }
+      setLoading(false);
+    }).catch(function() { setLoading(false); });
+  }, []);
+
+  var roleColor = ROLE_CONFIG.assistant.color;
+
+  if (loading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, gap: 12 }}>
+      <div style={{ width: 20, height: 20, border: "2px solid rgba(52,211,153,0.3)", borderTop: "2px solid #34D399", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Загружаем клиентов...</span>
+    </div>
+  );
+
+  if (selected) {
+    var tariffApps = { "take-all": 300, "take-all-plus": 2500, "vip": 5000 };
+    var totalApps = selected.totalApps || tariffApps[selected.tariff] || 300;
+    var doneApps = selected.doneApps || 0;
+    var leftApps = Math.max(0, totalApps - doneApps);
+    var appPct = Math.min(100, Math.round(doneApps / totalApps * 100));
+    var isLow = leftApps < 50;
+
+    return (
+      <div style={{ maxWidth: 700 }}>
+        <button onClick={function() { setSelected(null); }} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, marginBottom: 20, padding: "5px 0" }}>
+          ← Назад к списку
+        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "linear-gradient(135deg," + roleColor + ",#22c55e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 18 }}>{selected.name.charAt(0)}</div>
+          <div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#fff" }}>{selected.name}</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{selected.tariff?.toUpperCase()} · Старт: {selected.startDate}</div>
+          </div>
+        </div>
+
+        {/* Подачи */}
+        <div style={{ background: isLow ? "rgba(248,113,113,0.07)" : "rgba(52,211,153,0.06)", border: "1px solid " + (isLow ? "rgba(248,113,113,0.25)" : "rgba(52,211,153,0.2)"), borderRadius: 14, padding: "18px 20px", marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>📊 Подачи</div>
+            {isLow && <div style={{ fontSize: 11, color: "#F87171", fontWeight: 700, background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 20, padding: "2px 10px" }}>⚠️ Осталось мало!</div>}
+          </div>
+          <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: roleColor }}>{doneApps}</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>сделано</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: isLow ? "#F87171" : "#fff" }}>{leftApps}</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>осталось</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "rgba(255,255,255,0.3)" }}>{totalApps}</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>всего по тарифу</div>
+            </div>
+          </div>
+          <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+            <div style={{ height: "100%", width: appPct + "%", background: isLow ? "linear-gradient(90deg,#F87171,#ef4444)" : "linear-gradient(90deg," + roleColor + ",#22c55e)", borderRadius: 99, transition: "width 0.4s" }} />
+          </div>
+          <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+            <button onClick={function() {
+              var n = parseInt(prompt("Сколько подач сделано сегодня?") || "0");
+              if (!n || isNaN(n)) return;
+              var updated = Object.assign({}, selected, { doneApps: doneApps + n });
+              setSelected(updated);
+              setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? updated : c; }); });
+              sbSaveClient(updated, {}, {});
+            }} style={{ fontSize: 12, fontWeight: 700, color: roleColor, background: roleColor + "15", border: "1px solid " + roleColor + "40", borderRadius: 8, padding: "6px 14px", cursor: "pointer" }}>
+              + Добавить подачи
+            </button>
+            <button onClick={function() {
+              var n = parseInt(prompt("Введи общее количество сделанных подач:") || "0");
+              if (isNaN(n)) return;
+              var updated = Object.assign({}, selected, { doneApps: n });
+              setSelected(updated);
+              setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? updated : c; }); });
+              sbSaveClient(updated, {}, {});
+            }} style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "6px 14px", cursor: "pointer" }}>
+              Задать вручную
+            </button>
+          </div>
+        </div>
+
+        {/* Рабочая почта */}
+        <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 20px", marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 12 }}>📧 Рабочая почта для подач</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 4 }}>Email</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "9px 12px" }}>
+                <span style={{ fontSize: 13, color: "#fff", flex: 1, wordBreak: "break-all" }}>{selected.workEmail || "—"}</span>
+                {selected.workEmail && <button onClick={function() { navigator.clipboard.writeText(selected.workEmail); }} style={{ fontSize: 10, color: roleColor, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>📋</button>}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 4 }}>Пароль</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "9px 12px" }}>
+                <span style={{ fontSize: 13, color: "#fff", flex: 1, letterSpacing: "2px" }}>{selected.workPassword ? "••••••••" : "—"}</span>
+                {selected.workPassword && <button onClick={function() { navigator.clipboard.writeText(selected.workPassword); }} style={{ fontSize: 10, color: roleColor, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>📋</button>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Резюме */}
+        <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 20px", marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 10 }}>📄 Резюме</div>
+          {selected.resumeUrl ? (
+            <a href={selected.resumeUrl} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13, color: roleColor, textDecoration: "none", background: roleColor + "10", border: "1px solid " + roleColor + "30", borderRadius: 8, padding: "8px 14px", fontWeight: 600 }}>
+              📎 Открыть резюме в Google Doc →
+            </a>
+          ) : (
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>Резюме не прикреплено</div>
+          )}
+        </div>
+
+        {/* Заметки */}
+        {selected.notes && (
+          <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 20px" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 8 }}>📝 Заметки куратора</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{selected.notes}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: 800 }}>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>⚡ Мои клиенты</h1>
+        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Карточки клиентов с задачами по подачам</p>
+      </div>
+
+      {clients.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Клиенты не назначены</div>
+          <div style={{ fontSize: 13 }}>Куратор назначит тебя на клиентов — они появятся здесь</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {clients.map(function(client) {
+            var tariffApps = { "take-all": 300, "take-all-plus": 2500, "vip": 5000 };
+            var total = client.totalApps || tariffApps[client.tariff] || 300;
+            var done = client.doneApps || 0;
+            var left = Math.max(0, total - done);
+            var pct = Math.min(100, Math.round(done / total * 100));
+            var isLow = left < 50;
+
+            return (
+              <div key={client.id} onClick={function() { setSelected(client); }}
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid " + (isLow ? "rgba(248,113,113,0.3)" : "rgba(52,211,153,0.15)"), borderRadius: 14, padding: "16px 18px", cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={function(e) { e.currentTarget.style.borderColor = isLow ? "rgba(248,113,113,0.5)" : "rgba(52,211,153,0.4)"; }}
+                onMouseLeave={function(e) { e.currentTarget.style.borderColor = isLow ? "rgba(248,113,113,0.3)" : "rgba(52,211,153,0.15)"; }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg," + roleColor + ",#22c55e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{client.name.charAt(0)}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{client.name}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{client.tariff?.toUpperCase()} · {client.workEmail || "email не указан"}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: isLow ? "#F87171" : roleColor }}>{left}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>осталось подач</div>
+                  </div>
+                  {isLow && <div style={{ fontSize: 11, color: "#F87171", fontWeight: 700 }}>⚠️</div>}
+                </div>
+                <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                  <div style={{ height: "100%", width: pct + "%", background: isLow ? "#F87171" : roleColor, borderRadius: 99 }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{done} из {total} подач</span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{pct}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ЗАГЛУШКИ ДЛЯ ОСТАЛЬНЫХ РОЛЕЙ ──────────────────────────────────────────────
+
+function MentorView({ currentUser }) {
+  return (
+    <div style={{ maxWidth: 700, padding: "40px 0" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🧠</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Кабинет ментора</div>
+        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>
+          Здесь будут: страт-сессии, записи TL;DV, LinkedIn-заметки, моки и чекапы.<br/>
+          Раздел в разработке — скоро появится!
+        </div>
+        <div style={{ marginTop: 24, display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(244,114,182,0.1)", border: "1px solid rgba(244,114,182,0.25)", borderRadius: 12, padding: "10px 20px", fontSize: 13, color: "#F472B6" }}>
+          🚧 Этап 2 — в разработке
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SalesView({ currentUser }) {
+  return (
+    <div style={{ maxWidth: 700, padding: "40px 0" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>💼</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Кабинет Sales</div>
+        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>
+          Здесь будут: офферы клиентов, воронка продаж, контакты для Success Fee.<br/>
+          Раздел в разработке — скоро появится!
+        </div>
+        <div style={{ marginTop: 24, display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 12, padding: "10px 20px", fontSize: 13, color: "#FBBF24" }}>
+          🚧 Этап 2 — в разработке
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MarketingView({ currentUser }) {
+  return (
+    <div style={{ maxWidth: 700, padding: "40px 0" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>📣</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Кабинет Маркетинга</div>
+        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>
+          Здесь будут: кейсы успешных клиентов, офферы для контента, истории успеха.<br/>
+          Раздел в разработке — скоро появится!
+        </div>
+        <div style={{ marginTop: 24, display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(103,232,249,0.1)", border: "1px solid rgba(103,232,249,0.25)", borderRadius: 12, padding: "10px 20px", fontSize: 13, color: "#67E8F9" }}>
+          🚧 Этап 2 — в разработке
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── ОБЁРТКА ДЛЯ НЕ-КУРАТОРСКИХ РОЛЕЙ ────────────────────────────────────────
+function RoleShell({ user, onLogout, isMobile, children }) {
+  var rc = ROLE_CONFIG[user.role] || ROLE_CONFIG.curator;
+  return (
+    <div style={{ display: "flex", height: "100vh", background: "#080516", fontFamily: "Inter,-apple-system,sans-serif", flexDirection: "column", overflow: "hidden" }}>
+      <style dangerouslySetInnerHTML={{__html: "* { box-sizing: border-box; margin: 0; padding: 0; } ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(167,139,250,0.3); border-radius: 99px; } @keyframes spin { to { transform: rotate(360deg); } }"}} />
+      <header style={{ height: 56, background: "rgba(255,255,255,0.03)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", padding: "0 20px", gap: 14, flexShrink: 0 }}>
+        <div style={{ width: 26, height: 26, background: "linear-gradient(135deg,#A78BFA,#F472B6)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>🍍</div>
+        <div style={{ fontWeight: 800, fontSize: 14, color: "#fff" }}>Go Offer</div>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: rc.color + "15", border: "1px solid " + rc.color + "30", borderRadius: 20, padding: "4px 12px" }}>
+          <span style={{ fontSize: 13 }}>{rc.icon}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: rc.color }}>{rc.label}</span>
+        </div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{user.name}</div>
+        <button onClick={onLogout} style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, padding: "5px 10px", cursor: "pointer" }}>Выйти</button>
+      </header>
+      <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "16px 12px" : "24px" }}>
+        {children}
+      </main>
     </div>
   );
 }
@@ -2768,9 +3089,13 @@ export default function App() {
     return function() { window.removeEventListener("resize", onResize); };
   }, []);
 
-  if (!user) {
-    return <LoginScreen onLogin={setUser} />;
-  }
+  if (!user) return <LoginScreen onLogin={setUser} />;
+
+  // Не-кураторские роли → свои кабинеты
+  if (user.role === "assistant") return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><AssistantView currentUser={user} /></RoleShell>;
+  if (user.role === "mentor")    return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><MentorView currentUser={user} /></RoleShell>;
+  if (user.role === "sales")     return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><SalesView currentUser={user} /></RoleShell>;
+  if (user.role === "marketing") return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><MarketingView currentUser={user} /></RoleShell>;
 
   var SW = sidebar ? 210 : 60;
   var labels = { company: "Компания", curator: "Роль куратора", knowledge: "База знаний", tariffs: "Тарифы и продукты", guide: "Гайд", checklist: "Чеклист", clients: "Клиенты", ai: "AI-помощник", links: "Полезные ссылки" };
