@@ -3428,6 +3428,8 @@ function SlotCard({ slotType, slotIndex, slotNum, clientId, checks, onToggle, tl
 function MentorView({ currentUser, isCurator }) {
   var roleColor = "#F472B6";
   const [clients, setClients] = useState([]);
+  const [allClients, setAllClients] = useState([]);
+  const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [activeTab, setActiveTab] = useState("strategy");
@@ -3450,10 +3452,11 @@ function MentorView({ currentUser, isCurator }) {
   useEffect(function() {
     sbLoadClients().then(function(data) {
       if (data) {
-        var mine = isCurator
+        var myClients = isCurator
           ? data.clients
-          : data.clients.filter(function(c) { return c.mentor === currentUser.name || c.mentor === currentUser.email; });
-        setClients(mine);
+          : data.clients.filter(function(c) { return c.mentor === currentUser.name; });
+        setClients(myClients);
+        setAllClients(data.clients);
       }
       var saved = localStorage.getItem(storageKey());
       if (saved) {
@@ -3694,21 +3697,36 @@ function MentorView({ currentUser, isCurator }) {
   }
 
   // ── Список клиентов ──
+  var displayedClients = showAll ? allClients : clients;
   return (
     <div style={{ maxWidth: 800 }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>🧠 {isCurator ? "Клиенты (вид ментора)" : "Мои клиенты"}</h1>
-        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Страт-сессии, моки, LinkedIn и TL;DV по каждому менти</p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>🧠 {isCurator ? "Клиенты (вид ментора)" : "Мои клиенты"}</h1>
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Страт-сессии, моки, LinkedIn и TL;DV по каждому менти</p>
+        </div>
+        {!isCurator && (
+          <div style={{ display: "flex", gap: 0, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" }}>
+            <button onClick={function() { setShowAll(false); }}
+              style={{ padding: "8px 16px", fontSize: 12, fontWeight: showAll ? 400 : 700, color: showAll ? "rgba(255,255,255,0.4)" : "#F472B6", background: showAll ? "transparent" : "rgba(244,114,182,0.12)", border: "none", cursor: "pointer" }}>
+              Мои ({clients.length})
+            </button>
+            <button onClick={function() { setShowAll(true); }}
+              style={{ padding: "8px 16px", fontSize: 12, fontWeight: showAll ? 700 : 400, color: showAll ? "#A78BFA" : "rgba(255,255,255,0.4)", background: showAll ? "rgba(167,139,250,0.12)" : "transparent", border: "none", cursor: "pointer" }}>
+              Все ({allClients.length})
+            </button>
+          </div>
+        )}
       </div>
-      {clients.length === 0 ? (
+      {displayedClients.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Клиенты не назначены</div>
-          <div style={{ fontSize: 13 }}>Куратор назначит тебя на клиентов — они появятся здесь</div>
+          <div style={{ fontSize: 13 }}>Нажми «Все» чтобы увидеть всех клиентов, или попроси куратора закрепить тебя</div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {clients.map(function(client) {
+          {displayedClients.map(function(client) {
             var sCount = getSlotCount(client, "strategy");
             var mCount = getSlotCount(client, "mock");
             return (
