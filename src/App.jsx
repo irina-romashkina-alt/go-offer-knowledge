@@ -3434,6 +3434,98 @@ function SlotCard({ slotType, slotIndex, slotNum, clientId, checks, onToggle, tl
   );
 }
 
+function MentorRoleView() {
+  var sections = [
+    {
+      icon: "🧠", title: "Роль ментора", color: "#F472B6",
+      items: [
+        "Ментор — это эксперт-практик, который лично прошёл через поиск работы в США",
+        "Ты проводишь страт-сессии, моки и LinkedIn-ревью для закреплённых менти",
+        "Твоя задача — не просто провести сессию, а передать реальный опыт и уверенность",
+        "Все записи сессий (TL;DV) и заметки видны куратору — это часть командной работы",
+      ]
+    },
+    {
+      icon: "🎯", title: "Страт-сессия", color: "#A78BFA",
+      items: [
+        "Проводится в начале программы — определяем стратегию поиска",
+        "Разбираем опыт клиента и находим его сильные стороны для американского рынка",
+        "Определяем целевые позиции, компании, локацию и зарплатные ожидания",
+        "Обязательно прикрепляй TL;DV запись после каждой сессии",
+        "Заметки из сессии передаются куратору для работы над резюме",
+      ]
+    },
+    {
+      icon: "🔗", title: "LinkedIn-ревью", color: "#34D399",
+      items: [
+        "Проверяем фото, headline, About, опыт, скиллы и кастомный URL",
+        "LinkedIn должен рассказывать ту же историю что и резюме",
+        "Особое внимание — описанию восточноевропейских компаний (Яндекс, TikTok, Mail.ru)",
+        "Включаем Open to Work только для рекрутеров, не публично",
+        "После ревью — скачать PDF и проверить отображение",
+      ]
+    },
+    {
+      icon: "🎤", title: "Мок-интервью", color: "#FBBF24",
+      items: [
+        "Проводим по стандартной структуре: self-pitch → STAR-кейсы → salary → вопросы",
+        "Записывай на TL;DV — клиент должен видеть себя со стороны",
+        "Давай письменный фидбэк после каждого мока",
+        "Количество моков зависит от тарифа: Take All — 2, Take All+ — 4, VIP — 6",
+        "Следующий мок открывается только после завершения предыдущего чеклиста",
+      ]
+    },
+    {
+      icon: "⏰", title: "Расписание и связь", color: "#67E8F9",
+      items: [
+        "Отвечай на сообщения менти в течение 24 часов в рабочие дни",
+        "Все сессии фиксируй в системе через TL;DV — без записи сессия не считается проведённой",
+        "При пропуске сессии менти — уведомить куратора",
+        "Не обещай конкретные сроки оффера и не гарантируй трудоустройство",
+      ]
+    },
+  ];
+
+  return (
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Роль ментора</h1>
+        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Суть роли, зоны ответственности и процессы</p>
+      </div>
+
+      {/* Mission card */}
+      <div style={{ background: "linear-gradient(135deg,rgba(244,114,182,0.1),rgba(167,139,250,0.07))", border: "1px solid rgba(244,114,182,0.2)", borderRadius: 16, padding: "20px 24px", marginBottom: 16, position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#F472B6,#A78BFA)" }} />
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#F472B6", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>Миссия</div>
+        <div style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", lineHeight: 1.8 }}>
+          Ментор — это человек, который прошёл этот путь сам. Твоя задача не просто объяснить, а передать уверенность и реальный опыт: как выглядит американское интервью изнутри, как говорить о своих достижениях, как не сдаться на 200-м отказе.
+        </div>
+      </div>
+
+      {sections.map(function(s, i) {
+        return (
+          <div key={i} style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "18px 20px", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
+              <span style={{ fontSize: 18 }}>{s.icon}</span>
+              <div style={{ fontSize: 14, fontWeight: 700, color: s.color }}>{s.title}</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {s.items.map(function(item, j) {
+                return (
+                  <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, flexShrink: 0, marginTop: 7, opacity: 0.7 }} />
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.65 }}>{item}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MentorView({ currentUser, isCurator }) {
   var roleColor = "#F472B6";
   const [clients, setClients] = useState([]);
@@ -3847,17 +3939,35 @@ export default function App() {
   // Не-кураторские роли → свои кабинеты
   // admin видит полный интерфейс как куратор (роль curator тоже)
   if (user.role === "assistant") return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><AssistantView currentUser={user} /></RoleShell>;
-  if (user.role === "mentor")    return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><MentorView currentUser={user} /></RoleShell>;
   if (user.role === "sales")     return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><SalesView currentUser={user} /></RoleShell>;
   if (user.role === "marketing") return <RoleShell user={user} onLogout={function() { setUser(null); }} isMobile={isMobile}><MarketingView currentUser={user} /></RoleShell>;
   // admin и curator → полный интерфейс
+  // mentor → полный интерфейс с MentorView вместо ClientsView
+
+  var isMentor = user.role === "mentor";
 
   var SW = sidebar ? 210 : 60;
-  var labels = { company: "Компания", curator: "Роль куратора", knowledge: "База знаний", tariffs: "Тарифы и продукты", guide: "Гайд", checklist: "Чеклист", clients: "Клиенты", ai: "AI-помощник", links: "Полезные ссылки" };
-  var NAV = [
+  var labels = {
+    company: "Компания", curator: "Роль куратора", knowledge: "База знаний",
+    tariffs: "Тарифы и продукты", guide: "Гайд", checklist: "Чеклист",
+    clients: "Клиенты", ai: "AI-помощник", links: "Полезные ссылки",
+    mentor_role: "Роль ментора", mentor_clients: "Мои клиенты",
+  };
+
+  var NAV = isMentor ? [
+    { id: "company",        label: "Компания",          icon: "🏢" },
+    { id: "mentor_role",    label: "Роль ментора",       icon: "🧠" },
+    { id: "knowledge",      label: "База знаний",        icon: "📚" },
+    { id: "tariffs",        label: "Тарифы и продукты",  icon: "💎" },
+    { id: "guide",          label: "Гайд",               icon: "🗺️" },
+    { id: "checklist",      label: "Чек-лист сессий",    icon: "✅" },
+    { id: "mentor_clients", label: "Клиенты",            icon: "👥" },
+    { id: "ai",             label: "AI-помощник",        icon: "✨" },
+    { id: "links",          label: "Полезные ссылки",    icon: "🔗" },
+  ] : [
     { id: "company",   label: "Компания",          icon: "🏢" },
     { id: "curator",   label: "Роль куратора",      icon: "🎓" },
-    { id: "knowledge", label: "База знаний",         icon: "📚" },
+    { id: "knowledge", label: "База знаний",        icon: "📚" },
     { id: "tariffs",   label: "Тарифы и продукты",  icon: "💎" },
     { id: "guide",     label: "Гайд",               icon: "🗺️" },
     { id: "checklist", label: "Чеклист",             icon: "✅" },
@@ -4007,6 +4117,8 @@ export default function App() {
 
         <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 10px" : "20px 24px", paddingBottom: isMobile ? "80px" : "20px" }} onClick={function() { setNotif(false); setUserMenu(false); }}>
           {activeNav === "clients" ? <ClientsView currentUser={user} /> : null}
+          {activeNav === "mentor_clients" ? <MentorView currentUser={user} isCurator={false} /> : null}
+          {activeNav === "mentor_role" ? <MentorRoleView /> : null}
           {activeNav === "company" ? <CompanyView /> : null}
           {activeNav === "curator" ? <CuratorRoleView /> : null}
           {activeNav === "knowledge" ? <KnowledgeView search={search} /> : null}
