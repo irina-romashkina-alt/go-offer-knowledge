@@ -758,7 +758,7 @@ function ProductAndTariffsView() {
   var tar = TARIFFS.find(function(t) { return t.id === activeTariff; });
 
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto" }}>
       <div style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Тарифы и продукты</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Всё о программах Go Offer, стратсессия и доп. услуги</p>
@@ -886,7 +886,7 @@ function ProductAndTariffsView() {
               var isActive = activeTariff === t.id;
               return (
                 <button key={t.id} onClick={function() { setActiveTariff(t.id); }}
-                  style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid " + (isActive ? t.color + "88" : "rgba(255,255,255,0.1)"), background: isActive ? t.color + "18" : "rgba(255,255,255,0.03)", color: isActive ? t.color : "rgba(255,255,255,0.5)", fontWeight: isActive ? 700 : 400, fontSize: 13, cursor: "pointer", transition: "all 0.15s", boxShadow: isActive ? "0 0 16px " + t.color + "30" : "none" }}>
+                  style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid " + (isActive ? t.color + "88" : "rgba(255,255,255,0.1)"), background: isActive ? t.color + "18" : "rgba(255,255,255,0.03)", color: isActive ? t.color : "rgba(255,255,255,0.5)", fontWeight: isActive ? 700 : 400, fontSize: 13, cursor: "pointer", transition: "all 0.15s", boxShadow: "none" }}>
                   {t.name}{t.badge ? " · " + t.badge : ""}
                 </button>
               );
@@ -895,7 +895,7 @@ function ProductAndTariffsView() {
 
           <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 14, alignItems: "start" }}>
             <div style={Object.assign({}, G, { border: "1px solid " + tar.color + "44", borderRadius: 14, padding: "22px", position: "relative", overflow: "hidden" })}>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg," + tar.color + "," + tar.color + "44)", boxShadow: "0 0 14px " + tar.color }} />
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg," + tar.color + "," + tar.color + "44)", boxShadow: "none" }} />
               <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
                 <FloatingAstro color={tar.color} size={90} />
               </div>
@@ -909,7 +909,7 @@ function ProductAndTariffsView() {
                   {tar.rows.filter(function(r) { return r.hot; }).map(function(r, i) {
                     return (
                       <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 6 }}>
-                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: tar.color, flexShrink: 0, marginTop: 5, boxShadow: "0 0 5px " + tar.color }} />
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: tar.color, flexShrink: 0, marginTop: 5, boxShadow: "none" }} />
                         <div style={{ fontSize: 11, color: tar.color, fontWeight: 500, lineHeight: 1.4 }}>{r.label}: {r.value}</div>
                       </div>
                     );
@@ -1167,7 +1167,7 @@ function AIView() {
   function clearChat() { setCurrentMsgs([]); }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 120px)", maxWidth: 1100 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 120px)", maxWidth: 960 }}>
       <div style={{ marginBottom: 14, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>AI-помощник</h1>
@@ -1277,7 +1277,7 @@ function GuideView() {
   var step = GUIDE_STEPS[activeStep];
 
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto" }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Гайд куратора</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Пошаговый процесс работы с менти — от онбординга до оффера</p>
@@ -1341,7 +1341,7 @@ function GuideView() {
               return (
                 <div key={s.id} onClick={function() { setActiveStep(i); }}
                   style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 0", cursor: "pointer", borderBottom: i < GUIDE_STEPS.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: i === activeStep ? s.color : "rgba(255,255,255,0.12)", flexShrink: 0, boxShadow: i === activeStep ? "0 0 6px " + s.color : "none" }} />
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: i === activeStep ? s.color : "rgba(255,255,255,0.12)", flexShrink: 0, boxShadow: "none" }} />
                   <span style={{ fontSize: 12, color: i === activeStep ? s.color : "rgba(255,255,255,0.35)", fontWeight: i === activeStep ? 700 : 400 }}>{s.icon} {s.title}</span>
                 </div>
               );
@@ -1379,7 +1379,7 @@ function LinksView() {
   var tagColors = { "Notion": "#A78BFA", "Google Docs": "#34D399", "Google Sheets": "#34D399", "Платформа": "#FBBF24", "CRM": "#F472B6", "Calendar": "#FBBF24" };
 
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto" }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Полезные ссылки</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>FAQ — все нужные документы и инструменты в одном месте</p>
@@ -1446,7 +1446,7 @@ function CompanyView() {
   var sectionLabel = { fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 16 };
   var card = { background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "20px 22px", marginBottom: 16 };
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto" }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Компания</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Go Offer — кто мы, зачем и с кем работаем</p>
@@ -1594,7 +1594,7 @@ function CompanyView() {
 
 function CuratorRoleView() {
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto" }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Роль куратора</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Суть роли, KPI и права</p>
@@ -1713,7 +1713,7 @@ function ChecklistView() {
   var progress = allItems.length ? Math.round(doneCount / allItems.length * 100) : 0;
 
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto" }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Чеклист по тарифам</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Отмечай выполненные шаги по каждому клиенту</p>
@@ -1742,7 +1742,7 @@ function ChecklistView() {
           </div>
         </div>
         <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99 }}>
-          <div style={{ height: "100%", width: progress + "%", background: "linear-gradient(90deg," + cl.color + "," + cl.color + "99)", borderRadius: 99, transition: "width 0.3s ease", boxShadow: "0 0 8px " + cl.color + "60" }} />
+          <div style={{ height: "100%", width: progress + "%", background: "linear-gradient(90deg," + cl.color + "," + cl.color + "99)", borderRadius: 99, transition: "width 0.3s ease", boxShadow: "none" }} />
         </div>
       </div>
 
@@ -2193,7 +2193,7 @@ function ClientsView({ currentUser }) {
     var clientMentorNote = (allMentorData.notes || {})[selected.id] || "";
 
     return (
-      <div style={{ maxWidth: 1100 }}>
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
         {/* Back + header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={function() { setSelected(null); setActivePhase(null); }}
@@ -2311,7 +2311,7 @@ function ClientsView({ currentUser }) {
                     border: "1px solid " + (isActive ? st.color + "88" : "rgba(255,255,255,0.08)"),
                     borderRadius: 8, color: isActive ? st.color : "rgba(255,255,255,0.4)",
                     fontSize: 12, fontWeight: isActive ? 700 : 400, cursor: "pointer",
-                    boxShadow: isActive ? "0 0 12px " + st.color + "40" : "none",
+                    boxShadow: "none",
                     transition: "all 0.15s", whiteSpace: "nowrap",
                   }}>
                   <span>{st.icon}</span>
@@ -2334,7 +2334,7 @@ function ClientsView({ currentUser }) {
                 <span style={{ fontSize: 14, fontWeight: 800, color: pct === 100 ? "#34D399" : tarColor }}>{pct}%</span>
               </div>
               <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99 }}>
-                <div style={{ height: "100%", width: pct + "%", background: "linear-gradient(90deg," + tarColor + "," + tarColor + "88)", borderRadius: 99, transition: "width 0.4s", boxShadow: "0 0 8px " + tarColor + "60" }} />
+                <div style={{ height: "100%", width: pct + "%", background: "linear-gradient(90deg," + tarColor + "," + tarColor + "88)", borderRadius: 99, transition: "width 0.4s", boxShadow: "none" }} />
               </div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -2641,14 +2641,14 @@ function ClientsView({ currentUser }) {
 
   // ── List view ─────────────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 1100 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
         <div>
           <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Клиенты</h1>
           <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Воронка, статусы и диаграмма Ганта по каждому менти</p>
         </div>
         <button onClick={function() { setShowAdd(true); }}
-          style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", background: "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", boxShadow: "0 0 20px rgba(167,139,250,0.3)" }}>
+          style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", background: "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", boxShadow: "none" }}>
           + Добавить клиента
         </button>
       </div>
@@ -3025,7 +3025,7 @@ function LoginScreen({ onLogin }) {
 
       <div style={{ width: 420, position: "relative", zIndex: 1, padding: "0 16px" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ width: 56, height: 56, background: "linear-gradient(135deg,#A78BFA,#F472B6)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px", boxShadow: "0 0 32px rgba(167,139,250,0.4)", animation: "float 3s ease-in-out infinite" }}>🍍</div>
+          <div style={{ width: 56, height: 56, background: "linear-gradient(135deg,#A78BFA,#F472B6)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px", boxShadow: "none", animation: "float 3s ease-in-out infinite" }}>🍍</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>Go Offer</div>
           <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>Внутренняя платформа</div>
         </div>
@@ -3059,7 +3059,7 @@ function LoginScreen({ onLogin }) {
           </div>
 
           <button onClick={handleLogin} disabled={loading}
-            style={{ width: "100%", padding: "13px", background: loading ? "rgba(167,139,250,0.4)" : "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 11, fontSize: 14, fontWeight: 700, color: "#fff", cursor: loading ? "default" : "pointer", boxShadow: loading ? "none" : "0 0 24px rgba(167,139,250,0.35)", transition: "all 0.15s" }}>
+            style={{ width: "100%", padding: "13px", background: loading ? "rgba(167,139,250,0.4)" : "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 11, fontSize: 14, fontWeight: 700, color: "#fff", cursor: loading ? "default" : "pointer", boxShadow: "none", transition: "all 0.15s" }}>
             {loading ? "Входим..." : "Войти →"}
           </button>
         </div>
@@ -3109,7 +3109,7 @@ function AssistantView({ currentUser }) {
     var isLow = leftApps < 50;
 
     return (
-      <div style={{ maxWidth: 700 }}>
+      <div style={{ maxWidth: 700, margin: "0 auto" }}>
         <button onClick={function() { setSelected(null); }} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, marginBottom: 20, padding: "5px 0" }}>
           ← Назад к списку
         </button>
@@ -3214,7 +3214,7 @@ function AssistantView({ currentUser }) {
   }
 
   return (
-    <div style={{ maxWidth: 800 }}>
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>⚡ Мои клиенты</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Карточки клиентов с задачами по подачам</p>
@@ -3546,7 +3546,7 @@ function MentorView({ currentUser, isCurator }) {
     var clientNote = notes[selected.id] || "";
 
     return (
-      <div style={{ maxWidth: 800 }}>
+      <div style={{ maxWidth: 800, margin: "0 auto" }}>
         <button onClick={function() { setSelected(null); }} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, marginBottom: 20 }}>← Назад</button>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
@@ -3705,7 +3705,7 @@ function MentorView({ currentUser, isCurator }) {
   // ── Список клиентов ──
   var displayedClients = showAll ? allClients : clients;
   return (
-    <div style={{ maxWidth: 800 }}>
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>🧠 {isCurator ? "Клиенты (вид ментора)" : "Мои клиенты"}</h1>
@@ -3812,7 +3812,7 @@ function RoleShell({ user, onLogout, isMobile, children }) {
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{user.name}</div>
         <button onClick={onLogout} style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, padding: "5px 10px", cursor: "pointer" }}>Выйти</button>
       </header>
-      <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "16px 12px" : "24px" }}>
+      <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 10px" : "20px 24px" }}>
         {children}
       </main>
     </div>
@@ -3900,7 +3900,7 @@ export default function App() {
         <div style={{ height: 60, display: "flex", alignItems: "center", padding: sidebar ? "0 13px" : "0 10px", justifyContent: sidebar ? "space-between" : "center", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
           {sidebar ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 28, height: 28, background: "linear-gradient(135deg,#A78BFA,#F472B6)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, boxShadow: "0 0 12px rgba(167,139,250,0.5)" }}>🍍</div>
+              <div style={{ width: 28, height: 28, background: "linear-gradient(135deg,#A78BFA,#F472B6)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, boxShadow: "none" }}>🍍</div>
               <div>
                 <div style={{ fontWeight: 800, fontSize: 12, color: "#fff" }}>Go Offer</div>
                 <div style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.7px" }}>База знаний</div>
@@ -4002,7 +4002,7 @@ export default function App() {
           </div>
         )}
 
-        <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px 12px" : "20px", paddingBottom: isMobile ? "80px" : "20px" }} onClick={function() { setNotif(false); setUserMenu(false); }}>
+        <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 10px" : "20px 24px", paddingBottom: isMobile ? "80px" : "20px" }} onClick={function() { setNotif(false); setUserMenu(false); }}>
           {activeNav === "clients" ? <ClientsView currentUser={user} /> : null}
           {activeNav === "company" ? <CompanyView /> : null}
           {activeNav === "curator" ? <CuratorRoleView /> : null}
