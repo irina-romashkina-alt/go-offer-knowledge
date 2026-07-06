@@ -1167,7 +1167,8 @@ function AIView() {
   function clearChat() { setCurrentMsgs([]); }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 120px)", maxWidth: 960 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto", width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 130px)" }}>
       <div style={{ marginBottom: 14, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>AI-помощник</h1>
@@ -1268,6 +1269,7 @@ function AIView() {
           ↑
         </button>
       </div>
+    </div>
     </div>
   );
 }
