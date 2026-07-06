@@ -2854,6 +2854,7 @@ function ClientsView({ currentUser }) {
                     <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                       <span style={{ fontSize: 11, color: tarColor, background: tarColor + "15", border: "1px solid " + tarColor + "30", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{TARIFF_LABELS[client.tariff]}</span>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>👤 {client.curator}</span>
+                      {client.mentor && <span style={{ fontSize: 11, color: "#F472B6", background: "rgba(244,114,182,0.1)", border: "1px solid rgba(244,114,182,0.2)", padding: "1px 7px", borderRadius: 20 }}>🧠 {client.mentor}</span>}
                       {(function() {
                         var st = STATUS_STAGES.find(function(s) { return s.id === client.status; }) || STATUS_STAGES[0];
                         var isOpen = openStatusMenu === client.id;
