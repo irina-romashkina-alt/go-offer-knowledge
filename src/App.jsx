@@ -4001,14 +4001,56 @@ function MentorView({ currentUser, isCurator }) {
     );
   }
 
+  // Назначить себя ментором
+  function assignSelf(client) {
+    var updated = Object.assign({}, client, { mentor: currentUser.name });
+    sbSaveClient(updated, {}, {});
+    setAllClients(function(p) { return p.map(function(c) { return c.id === client.id ? updated : c; }); });
+    setClients(function(p) {
+      var already = p.find(function(c) { return c.id === client.id; });
+      return already ? p.map(function(c) { return c.id === client.id ? updated : c; }) : p.concat([updated]);
+    });
+  }
+
+  function unassignSelf(client) {
+    var updated = Object.assign({}, client, { mentor: "" });
+    sbSaveClient(updated, {}, {});
+    setAllClients(function(p) { return p.map(function(c) { return c.id === client.id ? updated : c; }); });
+    setClients(function(p) { return p.filter(function(c) { return c.id !== client.id; }); });
+  }
+
   // ── Список клиентов ──
   var displayedClients = showAll ? allClients : clients;
+
+  // Воронка для ментора
+  var SESSION_FUNNEL = [
+    { id: "no_strategy", label: "Без сессии",  icon: "🔴", color: "#F87171" },
+    { id: "strategy",    label: "Страт",        icon: "🎯", color: "#A78BFA" },
+    { id: "linkedin",    label: "LinkedIn",     icon: "🔗", color: "#34D399" },
+    { id: "mock",        label: "Моки",         icon: "🎤", color: "#FBBF24" },
+    { id: "checkin",     label: "Чекапы",       icon: "✅", color: "#67E8F9" },
+  ];
+
+  // Считаем прогресс сессий клиента
+  function getSessionProgress(client) {
+    var stratDone = Array.from({ length: getSlotCount(client, "strategy") }, function(_, i) {
+      return SESSION_CHECKLIST.every(function(it) { return checks[client.id + "_strategy" + i + "_" + it.id]; });
+    });
+    var mockDone = Array.from({ length: getSlotCount(client, "mock") }, function(_, i) {
+      return MOCK_CHECKLIST.every(function(it) { return checks[client.id + "_mock" + i + "_" + it.id]; });
+    });
+    return {
+      strategy: { done: stratDone.filter(Boolean).length, total: getSlotCount(client, "strategy") },
+      mock:      { done: mockDone.filter(Boolean).length, total: getSlotCount(client, "mock") },
+    };
+  }
+
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>🧠 {isCurator ? "Клиенты (вид ментора)" : "Мои клиенты"}</h1>
-          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Страт-сессии, моки, LinkedIn и TL;DV по каждому менти</p>
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Страт-сессии, LinkedIn, чекапы и моки</p>
         </div>
         {!isCurator && (
           <div style={{ display: "flex", gap: 0, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" }}>
@@ -4023,32 +4065,112 @@ function MentorView({ currentUser, isCurator }) {
           </div>
         )}
       </div>
+
       {displayedClients.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Клиенты не назначены</div>
-          <div style={{ fontSize: 13 }}>Нажми «Все» чтобы увидеть всех клиентов, или попроси куратора закрепить тебя</div>
+          <div style={{ fontSize: 13 }}>Нажми «Все» → выбери клиента и нажми «Взять клиента»</div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {displayedClients.map(function(client) {
             var sCount = getSlotCount(client, "strategy");
             var mCount = getSlotCount(client, "mock");
+            var prog = getSessionProgress(client);
+            var isMyClient = client.mentor === currentUser.name;
+            var tariffSessions = TARIFF_SESSIONS[client.tariff] || TARIFF_SESSIONS["default"];
+
+            // Прогресс по чеклистам слотов
+            var stratSlots = Array.from({ length: sCount }, function(_, i) {
+              var done = SESSION_CHECKLIST.filter(function(it) { return checks[client.id + "_strategy" + i + "_" + it.id]; }).length;
+              var hasTldv = !!(tldvData[client.id + "_strategy_" + i]);
+              return { num: i + 1, done: done, total: SESSION_CHECKLIST.length, hasTldv: hasTldv };
+            });
+            var mockSlots = Array.from({ length: mCount }, function(_, i) {
+              var done = MOCK_CHECKLIST.filter(function(it) { return checks[client.id + "_mock" + i + "_" + it.id]; }).length;
+              var hasTldv = !!(tldvData[client.id + "_mock_" + i]);
+              return { num: i + 1, done: done, total: MOCK_CHECKLIST.length, hasTldv: hasTldv };
+            });
+            var liDone = MENTOR_CHECKLISTS.linkedin.items.filter(function(it) { return checks[client.id + "_li_" + it.id]; }).length;
+            var chDone = MENTOR_CHECKLISTS.checkin.items.filter(function(it) { return checks[client.id + "_ch_" + it.id]; }).length;
+
             return (
-              <div key={client.id} onClick={function() { setSelected(client); setActiveTab("strategy"); }}
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(244,114,182,0.15)", borderRadius: 14, padding: "16px 18px", cursor: "pointer", transition: "all 0.15s" }}
-                onMouseEnter={function(e) { e.currentTarget.style.borderColor = "rgba(244,114,182,0.4)"; }}
-                onMouseLeave={function(e) { e.currentTarget.style.borderColor = "rgba(244,114,182,0.15)"; }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#F472B6,#A78BFA)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15 }}>{client.name.charAt(0)}</div>
-                  <div style={{ flex: 1 }}>
+              <div key={client.id}
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid " + (isMyClient ? "rgba(244,114,182,0.25)" : "rgba(255,255,255,0.07)"), borderRadius: 14, padding: "14px 16px", transition: "all 0.15s" }}>
+
+                {/* Шапка карточки */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <div onClick={function() { setSelected(client); setActiveTab("strategy"); }}
+                    style={{ width: 38, height: 38, borderRadius: "50%", background: isMyClient ? "linear-gradient(135deg,#F472B6,#A78BFA)" : "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0, cursor: "pointer" }}>
+                    {client.name.charAt(0)}
+                  </div>
+                  <div style={{ flex: 1, cursor: "pointer" }} onClick={function() { setSelected(client); setActiveTab("strategy"); }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{client.name}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{(client.tariff || "").toUpperCase()}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
+                      {(client.tariff || "").toUpperCase()}
+                      {client.status && <span style={{ marginLeft: 6, color: "rgba(255,255,255,0.25)" }}>· {client.status}</span>}
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <span style={{ fontSize: 11, color: "#A78BFA", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)", padding: "2px 8px", borderRadius: 20 }}>🎯 {sCount} сессий</span>
-                    <span style={{ fontSize: 11, color: "#FBBF24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", padding: "2px 8px", borderRadius: 20 }}>🎤 {mCount} моков</span>
+
+                  {/* Кнопка взять/снять */}
+                  {!isCurator && (
+                    isMyClient
+                      ? <button onClick={function(e) { e.stopPropagation(); unassignSelf(client); }}
+                          style={{ fontSize: 11, color: "#F87171", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}>
+                          Снять себя
+                        </button>
+                      : <button onClick={function(e) { e.stopPropagation(); assignSelf(client); }}
+                          style={{ fontSize: 11, fontWeight: 700, color: "#F472B6", background: "rgba(244,114,182,0.1)", border: "1px solid rgba(244,114,182,0.3)", borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}>
+                          + Взять клиента
+                        </button>
+                  )}
+                  {client.mentor && client.mentor !== currentUser.name && (
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "2px 8px" }}>🧠 {client.mentor}</span>
+                  )}
+                </div>
+
+                {/* Сессии по тарифу */}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {/* Страт-сессии */}
+                  {stratSlots.map(function(sl) {
+                    var pct = Math.round(sl.done / sl.total * 100);
+                    return (
+                      <div key={"s" + sl.num} onClick={function() { setSelected(client); setActiveTab("strategy"); }}
+                        style={{ display: "flex", alignItems: "center", gap: 6, background: pct === 100 ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.04)", border: "1px solid " + (pct === 100 ? "rgba(167,139,250,0.35)" : "rgba(255,255,255,0.07)"), borderRadius: 8, padding: "5px 10px", cursor: "pointer" }}>
+                        <span style={{ fontSize: 12 }}>🎯</span>
+                        <span style={{ fontSize: 11, color: pct === 100 ? "#A78BFA" : "rgba(255,255,255,0.4)", fontWeight: 600 }}>#{sl.num} {sl.done}/{sl.total}</span>
+                        {sl.hasTldv && <span style={{ fontSize: 10 }}>🎬</span>}
+                      </div>
+                    );
+                  })}
+
+                  {/* LinkedIn */}
+                  <div onClick={function() { setSelected(client); setActiveTab("linkedin"); }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: liDone === MENTOR_CHECKLISTS.linkedin.items.length ? "rgba(52,211,153,0.1)" : "rgba(255,255,255,0.04)", border: "1px solid " + (liDone === MENTOR_CHECKLISTS.linkedin.items.length ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.07)"), borderRadius: 8, padding: "5px 10px", cursor: "pointer" }}>
+                    <span style={{ fontSize: 12 }}>🔗</span>
+                    <span style={{ fontSize: 11, color: liDone === MENTOR_CHECKLISTS.linkedin.items.length ? "#34D399" : "rgba(255,255,255,0.4)", fontWeight: 600 }}>{liDone}/{MENTOR_CHECKLISTS.linkedin.items.length}</span>
                   </div>
+
+                  {/* Чекапы */}
+                  <div onClick={function() { setSelected(client); setActiveTab("checkin"); }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: chDone === MENTOR_CHECKLISTS.checkin.items.length ? "rgba(103,232,249,0.1)" : "rgba(255,255,255,0.04)", border: "1px solid " + (chDone === MENTOR_CHECKLISTS.checkin.items.length ? "rgba(103,232,249,0.3)" : "rgba(255,255,255,0.07)"), borderRadius: 8, padding: "5px 10px", cursor: "pointer" }}>
+                    <span style={{ fontSize: 12 }}>✅</span>
+                    <span style={{ fontSize: 11, color: chDone === MENTOR_CHECKLISTS.checkin.items.length ? "#67E8F9" : "rgba(255,255,255,0.4)", fontWeight: 600 }}>{chDone}/{MENTOR_CHECKLISTS.checkin.items.length}</span>
+                  </div>
+
+                  {/* Моки */}
+                  {mockSlots.map(function(sl) {
+                    var pct = Math.round(sl.done / sl.total * 100);
+                    return (
+                      <div key={"m" + sl.num} onClick={function() { setSelected(client); setActiveTab("mock"); }}
+                        style={{ display: "flex", alignItems: "center", gap: 6, background: pct === 100 ? "rgba(251,191,36,0.1)" : "rgba(255,255,255,0.04)", border: "1px solid " + (pct === 100 ? "rgba(251,191,36,0.3)" : "rgba(255,255,255,0.07)"), borderRadius: 8, padding: "5px 10px", cursor: "pointer" }}>
+                        <span style={{ fontSize: 12 }}>🎤</span>
+                        <span style={{ fontSize: 11, color: pct === 100 ? "#FBBF24" : "rgba(255,255,255,0.4)", fontWeight: 600 }}>#{sl.num} {sl.done}/{sl.total}</span>
+                        {sl.hasTldv && <span style={{ fontSize: 10 }}>🎬</span>}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
