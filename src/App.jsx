@@ -1787,6 +1787,210 @@ function ChecklistView() {
   );
 }
 
+// ── РАСПИСАНИЕ СЕССИЙ ДЛЯ МЕНТОРА ─────────────────────────────────────────────
+function MentorScheduleView({ currentUser }) {
+  var today = new Date();
+  var fmt = function(d) { return d.toISOString().slice(0, 10); };
+  var addDays = function(d, n) { var r = new Date(d); r.setDate(r.getDate() + n); return r; };
+
+  const [dateFrom, setDateFrom] = useState(fmt(today));
+  const [dateTo, setDateTo]     = useState(fmt(addDays(today, 13)));
+  const [sessions, setSessions] = useState(function() {
+    try { return JSON.parse(localStorage.getItem("mentor_schedule_" + currentUser.email) || "[]"); } catch(e) { return []; }
+  });
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ clientName: "", type: "strategy", date: fmt(today), time: "18:00", status: "planned", tldvUrl: "", note: "" });
+  const [editId, setEditId] = useState(null);
+
+  function save(list) {
+    setSessions(list);
+    localStorage.setItem("mentor_schedule_" + currentUser.email, JSON.stringify(list));
+  }
+
+  function addSession() {
+    if (!form.clientName.trim() || !form.date) return;
+    var entry = Object.assign({}, form, { id: Date.now(), clientName: form.clientName.trim() });
+    var list = editId ? sessions.map(function(s) { return s.id === editId ? entry : s; }) : sessions.concat([entry]);
+    save(list);
+    setShowForm(false);
+    setEditId(null);
+    setForm({ clientName: "", type: "strategy", date: fmt(today), time: "18:00", status: "planned", tldvUrl: "", note: "" });
+  }
+
+  function deleteSession(id) { save(sessions.filter(function(s) { return s.id !== id; })); }
+
+  function setStatus(id, status) {
+    save(sessions.map(function(s) { return s.id === id ? Object.assign({}, s, { status: status }) : s; }));
+  }
+
+  function openEdit(s) {
+    setForm({ clientName: s.clientName, type: s.type, date: s.date, time: s.time, status: s.status, tldvUrl: s.tldvUrl || "", note: s.note || "" });
+    setEditId(s.id);
+    setShowForm(true);
+  }
+
+  var SESSION_TYPES = {
+    strategy: { label: "Страт-сессия", icon: "🎯", color: "#A78BFA" },
+    linkedin:  { label: "LinkedIn",     icon: "🔗", color: "#34D399" },
+    mock:      { label: "Мок",          icon: "🎤", color: "#FBBF24" },
+    checkin:   { label: "Чекап",        icon: "✅", color: "#67E8F9" },
+  };
+
+  var STATUS_MAP = {
+    planned:   { label: "Запланирована", color: "#A78BFA", bg: "rgba(167,139,250,0.12)" },
+    done:      { label: "Проведена",     color: "#34D399", bg: "rgba(52,211,153,0.1)" },
+    waiting:   { label: "Ждём TL;DV",   color: "#FBBF24", bg: "rgba(251,191,36,0.1)" },
+    cancelled: { label: "Отменена",      color: "#F87171", bg: "rgba(248,113,113,0.1)" },
+  };
+
+  var filtered = sessions.filter(function(s) { return s.date >= dateFrom && s.date <= dateTo; })
+    .sort(function(a, b) { return a.date > b.date ? 1 : a.date < b.date ? -1 : 0; });
+
+  var byDate = {};
+  filtered.forEach(function(s) {
+    if (!byDate[s.date]) byDate[s.date] = [];
+    byDate[s.date].push(s);
+  });
+  var dates = Object.keys(byDate).sort();
+
+  var dayNames = ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
+  var monthNames = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+  function fmtDate(str) { var d = new Date(str + "T12:00:00"); return dayNames[d.getDay()] + ", " + d.getDate() + " " + monthNames[d.getMonth()]; }
+  function isToday(str) { return str === fmt(today); }
+
+  return (
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Чек-лист сессий</h1>
+        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Расписание страт-сессий, LinkedIn, моков и чекапов</p>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 10, padding: "8px 14px" }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>с</span>
+          <input type="date" value={dateFrom} onChange={function(e) { setDateFrom(e.target.value); }}
+            style={{ background: "transparent", border: "none", color: "#fff", fontSize: 13, fontWeight: 600, outline: "none", fontFamily: "inherit", cursor: "pointer" }} />
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>по</span>
+          <input type="date" value={dateTo} onChange={function(e) { setDateTo(e.target.value); }}
+            style={{ background: "transparent", border: "none", color: "#fff", fontSize: 13, fontWeight: 600, outline: "none", fontFamily: "inherit", cursor: "pointer" }} />
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[{ label: "Неделя", days: 6 },{ label: "2 недели", days: 13 },{ label: "Месяц", days: 29 }].map(function(p) {
+            return <button key={p.label} onClick={function() { setDateFrom(fmt(today)); setDateTo(fmt(addDays(today, p.days))); }}
+              style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{p.label}</button>;
+          })}
+        </div>
+        <div style={{ marginLeft: "auto" }}>
+          <button onClick={function() { setShowForm(true); setEditId(null); setForm({ clientName: "", type: "strategy", date: fmt(today), time: "18:00", status: "planned", tldvUrl: "", note: "" }); }}
+            style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#F472B6,#A78BFA)", border: "none", borderRadius: 10, padding: "9px 18px", cursor: "pointer" }}>+ Добавить сессию</button>
+        </div>
+      </div>
+
+      {showForm && (
+        <div style={{ background: "rgba(244,114,182,0.06)", border: "1px solid rgba(244,114,182,0.2)", borderRadius: 14, padding: "18px 20px", marginBottom: 20 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#F472B6", marginBottom: 14 }}>{editId ? "Редактировать сессию" : "Новая сессия"}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+            {[{ label: "Имя клиента *", key: "clientName", type: "text", ph: "Имя Фамилия" },{ label: "Дата *", key: "date", type: "date", ph: "" },{ label: "Время", key: "time", type: "time", ph: "" }].map(function(f) {
+              return <div key={f.key}>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>{f.label}</div>
+                <input type={f.type} value={form[f.key]} placeholder={f.ph}
+                  onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { [f.key]: v }); }); }}
+                  style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 11px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit" }} />
+              </div>;
+            })}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>Тип сессии</div>
+              <select value={form.type} onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { type: v }); }); }}
+                style={{ width: "100%", background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 11px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit" }}>
+                {Object.entries(SESSION_TYPES).map(function(e) { return <option key={e[0]} value={e[0]}>{e[1].icon} {e[1].label}</option>; })}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>Статус</div>
+              <select value={form.status} onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { status: v }); }); }}
+                style={{ width: "100%", background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 11px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit" }}>
+                {Object.entries(STATUS_MAP).map(function(e) { return <option key={e[0]} value={e[0]}>{e[1].label}</option>; })}
+              </select>
+            </div>
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>Ссылка TL;DV</div>
+            <input type="url" value={form.tldvUrl} placeholder="https://tldv.io/..."
+              onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { tldvUrl: v }); }); }}
+              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 11px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit" }} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>Заметка</div>
+            <textarea value={form.note} placeholder="Итоги сессии, что передать куратору..."
+              onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { note: v }); }); }}
+              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 11px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit", resize: "vertical", minHeight: 70, lineHeight: 1.6 }} />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={addSession} style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#F472B6,#A78BFA)", border: "none", borderRadius: 9, padding: "9px 20px", cursor: "pointer" }}>{editId ? "Сохранить" : "Добавить"}</button>
+            <button onClick={function() { setShowForm(false); setEditId(null); }} style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 9, padding: "9px 16px", cursor: "pointer" }}>Отмена</button>
+          </div>
+        </div>
+      )}
+
+      {dates.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Сессий в этом периоде нет</div>
+          <div style={{ fontSize: 13 }}>Нажми «+ Добавить сессию» чтобы запланировать первую</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {dates.map(function(date) {
+            var todayMark = isToday(date);
+            return (
+              <div key={date}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: todayMark ? "#A78BFA" : "rgba(255,255,255,0.5)" }}>
+                    {fmtDate(date)}{todayMark && <span style={{ fontSize: 10, color: "#A78BFA", background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 20, padding: "1px 7px", marginLeft: 6 }}>Сегодня</span>}
+                  </div>
+                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {byDate[date].map(function(s) {
+                    var st = SESSION_TYPES[s.type] || SESSION_TYPES.strategy;
+                    var sm = STATUS_MAP[s.status] || STATUS_MAP.planned;
+                    return (
+                      <div key={s.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderLeft: "3px solid " + st.color, borderRadius: "0 12px 12px 0", padding: "12px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                          <div style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>{st.icon}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{s.clientName}</span>
+                              <span style={{ fontSize: 11, color: st.color, background: st.color + "15", border: "1px solid " + st.color + "30", padding: "1px 8px", borderRadius: 20 }}>{st.label}</span>
+                              {s.time && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>🕐 {s.time}</span>}
+                              <span style={{ fontSize: 11, color: sm.color, background: sm.bg, border: "1px solid " + sm.color + "40", padding: "1px 8px", borderRadius: 20 }}>{sm.label}</span>
+                            </div>
+                            {s.tldvUrl && <a href={s.tldvUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#FBBF24", textDecoration: "none", display: "block", marginBottom: 4 }}>🎬 TL;DV запись</a>}
+                            {s.note && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>📝 {s.note}</div>}
+                          </div>
+                          <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+                            {s.status !== "done" && <button onClick={function() { setStatus(s.id, "done"); }} style={{ fontSize: 10, color: "#34D399", background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>✓ Провели</button>}
+                            {s.status === "done" && !s.tldvUrl && <button onClick={function() { openEdit(s); }} style={{ fontSize: 10, color: "#FBBF24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>🎬 TL;DV</button>}
+                            <button onClick={function() { openEdit(s); }} style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>✏️</button>
+                            <button onClick={function() { deleteSession(s.id); }} style={{ fontSize: 10, color: "#F87171", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>✕</button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 const CURATORS = ["Ксюша", "Саша"];
 
 const TARIFF_LABELS = {
@@ -4119,12 +4323,13 @@ export default function App() {
           {activeNav === "clients" ? <ClientsView currentUser={user} /> : null}
           {activeNav === "mentor_clients" ? <MentorView currentUser={user} isCurator={false} /> : null}
           {activeNav === "mentor_role" ? <MentorRoleView /> : null}
+          {activeNav === "checklist" ? (isMentor ? <MentorScheduleView currentUser={user} /> : <ChecklistView />) : null}
           {activeNav === "company" ? <CompanyView /> : null}
           {activeNav === "curator" ? <CuratorRoleView /> : null}
           {activeNav === "knowledge" ? <KnowledgeView search={search} /> : null}
           {activeNav === "tariffs" ? <ProductAndTariffsView /> : null}
           {activeNav === "guide" ? <GuideView /> : null}
-          {activeNav === "checklist" ? <ChecklistView /> : null}
+          {activeNav === "checklist" ? null : null}
           {activeNav === "ai" ? <AIView /> : null}
           {activeNav === "links" ? <LinksView /> : null}
         </main>
