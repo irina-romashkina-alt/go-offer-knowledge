@@ -3514,6 +3514,36 @@ const MOCK_CHECKLIST = [
   { id: "mc11", text: "Дать письменный фидбэк по итогам" },
 ];
 
+const MENTOR_CHECKLISTS = {
+  linkedin: {
+    label: "LinkedIn", icon: "🔗", color: "#34D399",
+    items: [
+      { id: "l1", text: "Проверить фото профиля (профессиональное, высокое качество)" },
+      { id: "l2", text: "Написать headline — конкретный тайтл + ключевые навыки" },
+      { id: "l3", text: "Заполнить About (150-300 слов, от первого лица)" },
+      { id: "l4", text: "Синхронизировать опыт с резюме (даты, тайтлы, компании)" },
+      { id: "l5", text: "Добавить описание компаний (Яндекс, TikTok и т.д.)" },
+      { id: "l6", text: "Заполнить Skills (минимум 10, релевантных тайтлу)" },
+      { id: "l7", text: "Добавить сертификаты и курсы" },
+      { id: "l8", text: "Включить Open to Work (только для рекрутеров)" },
+      { id: "l9", text: "Кастомизировать URL профиля" },
+      { id: "l10", text: "Проверить язык профиля — английский основной" },
+      { id: "l11", text: "Скачать PDF и проверить отображение" },
+    ]
+  },
+  checkin: {
+    label: "Чекап", icon: "✅", color: "#67E8F9",
+    items: [
+      { id: "c1", text: "Проверить статистику подач за период" },
+      { id: "c2", text: "Разобрать отклики / молчание" },
+      { id: "c3", text: "Обсудить фидбэк с реальных интервью" },
+      { id: "c4", text: "Скорректировать стратегию поиска если нужно" },
+      { id: "c5", text: "Проверить эмоциональное состояние клиента" },
+      { id: "c6", text: "Поставить цели на следующий период" },
+    ]
+  },
+};
+
 function SlotCard({ slotType, slotIndex, slotNum, clientId, checks, onToggle, tldv, onSaveTldv, onDeleteTldv, isLocked, isCurator }) {
   var isStrategy = slotType === "strategy";
   var checklist = isStrategy ? SESSION_CHECKLIST : MOCK_CHECKLIST;
