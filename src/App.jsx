@@ -3890,9 +3890,9 @@ function MentorView({ currentUser, isCurator }) {
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {[
             { id: "strategy", label: "Страт-сессии", icon: "🎯", color: "#A78BFA", count: stratCount },
-            { id: "mock", label: "Моки", icon: "🎤", color: "#FBBF24", count: mockCount },
             { id: "linkedin", label: "LinkedIn", icon: "🔗", color: "#34D399" },
             { id: "checkin", label: "Чекапы", icon: "✅", color: "#67E8F9" },
+            { id: "mock", label: "Моки", icon: "🎤", color: "#FBBF24", count: mockCount },
           ].map(function(tab) {
             var active = activeTab === tab.id;
             return (
