@@ -3829,6 +3829,69 @@ function MarketingView({ currentUser }) {
 }
 
 // ── ОБЁРТКА ДЛЯ НЕ-КУРАТОРСКИХ РОЛЕЙ ────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  function handleLogin() {
+    var e = email.trim().toLowerCase();
+    if (!e) { setError("Введи корпоративную почту"); return; }
+    if (!e.endsWith("@go-offer.us")) { setError("Доступ только для сотрудников Go Offer (@go-offer.us)"); return; }
+    var staff = STAFF.find(function(s) { return s.email === e; });
+    if (!staff) { setError("Сотрудник не найден. Обратись в общий чат."); return; }
+    setLoading(true);
+    setTimeout(function() { onLogin({ email: e, name: staff.name, role: staff.role }); setLoading(false); }, 600);
+  }
+
+  function onKey(e) { if (e.key === "Enter") handleLogin(); }
+
+  return (
+    <div style={{ display:"flex", height:"100vh", background:"#080516", fontFamily:"Inter,-apple-system,sans-serif", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden" }}>
+      <style dangerouslySetInnerHTML={{__html:"* { box-sizing:border-box; margin:0; padding:0; } input { font-family:inherit; } button { font-family:inherit; cursor:pointer; } @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} } @keyframes spin { to { transform:rotate(360deg); } }"}} />
+      <div style={{ position:"fixed", top:-200, left:-200, width:600, height:600, background:"radial-gradient(circle,rgba(167,139,250,0.12),transparent 70%)", pointerEvents:"none" }} />
+      <div style={{ position:"fixed", bottom:-200, right:-100, width:500, height:500, background:"radial-gradient(circle,rgba(244,114,182,0.08),transparent 70%)", pointerEvents:"none" }} />
+
+      <div style={{ width:420, position:"relative", zIndex:1, padding:"0 16px" }}>
+        <div style={{ textAlign:"center", marginBottom:36 }}>
+          <div style={{ width:56, height:56, background:"linear-gradient(135deg,#A78BFA,#F472B6)", borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 16px", animation:"float 3s ease-in-out infinite" }}>🍍</div>
+          <div style={{ fontSize:22, fontWeight:800, color:"#fff" }}>Go Offer</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.35)", marginTop:4 }}>Внутренняя платформа</div>
+        </div>
+
+        <div style={{ background:"rgba(255,255,255,0.04)", backdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:18, padding:"32px 28px" }}>
+          <div style={{ fontSize:16, fontWeight:700, color:"#fff", marginBottom:6 }}>Вход в систему</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.4)", marginBottom:20, lineHeight:1.5 }}>Доступ только для сотрудников @go-offer.us</div>
+
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:20 }}>
+            {Object.entries(ROLE_CONFIG).map(function(entry) {
+              var key = entry[0]; var r = entry[1];
+              return <div key={key} style={{ fontSize:10, color:r.color, background:r.color+"15", border:"1px solid "+r.color+"30", padding:"3px 10px", borderRadius:20, fontWeight:600 }}>{r.icon} {r.label}</div>;
+            })}
+          </div>
+
+          <div style={{ marginBottom:16 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.4)", textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:8 }}>Корпоративная почта</div>
+            <input value={email} onChange={function(e){setEmail(e.target.value);setError("");}} onKeyDown={onKey}
+              placeholder="name@go-offer.us" type="email"
+              style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:"1px solid "+(error?"rgba(248,113,113,0.5)":"rgba(255,255,255,0.1)"), borderRadius:10, padding:"12px 14px", fontSize:14, color:"#fff", outline:"none", fontFamily:"inherit" }} />
+            {error && <div style={{ fontSize:12, color:"#F87171", marginTop:7 }}>⚠️ {error}</div>}
+          </div>
+
+          <button onClick={handleLogin} disabled={loading}
+            style={{ width:"100%", padding:"13px", background:loading?"rgba(167,139,250,0.4)":"linear-gradient(135deg,#A78BFA,#7C3AED)", border:"none", borderRadius:11, fontSize:14, fontWeight:700, color:"#fff", cursor:loading?"default":"pointer", transition:"all 0.15s" }}>
+            {loading ? "Входим..." : "Войти →"}
+          </button>
+        </div>
+
+        <div style={{ textAlign:"center", marginTop:20, fontSize:12, color:"rgba(255,255,255,0.2)" }}>
+          Проблемы со входом? Напиши в общий чат Go Offer
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RoleShell({ user, onLogout, isMobile, children }) {
   var rc = ROLE_CONFIG[user.role] || ROLE_CONFIG.curator;
   return (
