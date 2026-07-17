@@ -1,5 +1,38 @@
 import { useState, useRef, useEffect } from "react";
 
+// ============================================================
+//  GO OFFER — ВНУТРЕННЯЯ ПЛАТФОРМА
+//  Последнее обновление: июль 2026
+// ============================================================
+//
+//  ОГЛАВЛЕНИЕ (ищи по названию секции через Ctrl+F)
+//
+//  1. ПРОМПТЫ AI-ПОМОЩНИКА         → SYSTEM_PROMPT_MESSAGES / WARMUP
+//  2. ДАННЫЕ: ТАРИФЫ И ПРОДУКТЫ    → TARIFFS, TARIFF_CHECKLISTS
+//  3. ДАННЫЕ: КОНТЕНТ САЙТА        → DOCS, COMPANY_INFO, CURATOR_ROLE
+//  4. ДАННЫЕ: ГАЙД И ССЫЛКИ        → GUIDE_STEPS, LINKS, PRODUCT_INFO
+//  5. ДАННЫЕ: КЛИЕНТЫ              → STATUS_STAGES, GANTT_PHASES, INITIAL_CLIENTS
+//  6. ДАННЫЕ: РОЛИ И СОТРУДНИКИ    → ROLE_CONFIG, STAFF, CURATORS, EDITORS
+//  7. ДАННЫЕ: СЕССИИ МЕНТОРА       → TARIFF_SESSIONS, SESSION_CHECKLIST, MENTOR_CHECKLISTS
+//  8. SUPABASE                     → sbFetch, sbLoadClients, sbSaveClient
+//
+//  КОМПОНЕНТЫ:
+//  9.  ОБЩИЕ                       → AstroSVG, FloatingAstro
+//  10. РАЗДЕЛЫ САЙТА (КУРАТОРЫ)    → CompanyView, CuratorRoleView, KnowledgeView
+//  11. ТАРИФЫ И ПРОДУКТЫ           → ProductAndTariffsView
+//  12. AI-ПОМОЩНИК                 → AIView
+//  13. ГАЙД И ЧЕКЛИСТ              → GuideView, ChecklistView
+//  14. ССЫЛКИ                      → LinksView
+//  15. КЛИЕНТЫ (КУРАТОР)           → ClientsView
+//  16. МЕНТОР                      → MentorRoleView, MentorView, SlotCard
+//  17. РАСПИСАНИЕ СЕССИЙ           → MentorScheduleView
+//  18. АССИСТЕНТ                   → AssistantView
+//  19. SALES / МАРКЕТИНГ           → SalesView, MarketingView
+//  20. АВТОРИЗАЦИЯ                 → LoginScreen, RoleShell
+//  21. ГЛАВНЫЙ КОМПОНЕНТ           → App (роутинг по ролям)
+//
+// ============================================================
+
 const SYSTEM_PROMPT_MESSAGES = `Ты помощник куратора Go Offer. Пишешь готовые сообщения для отправки менти.
 
 ГЛАВНОЕ ПРАВИЛО — ВСЕГДА давай 3 варианта сообщения. Каждый вариант — под разную ситуацию или тональность. Оформляй так:
@@ -105,6 +138,10 @@ const SYSTEM_PROMPT_WARMUP = `Ты помощник куратора Go Offer. �
 Тон: как пишет живой человек другу — заботливо, без манипуляций, с верой в результат.`;
 
 
+// ============================================================
+// 2. ДАННЫЕ: ТАРИФЫ И ПРОДУКТЫ
+// ============================================================
+
 const TARIFFS = [
   {
     id: "take-all", name: "Take All", price: "$2,850", fee: "4%", duration: "6 мес",
@@ -192,6 +229,10 @@ const TARIFFS = [
     ]
   },
 ];
+
+// ============================================================
+// 3. ДАННЫЕ: КОНТЕНТ САЙТА
+// ============================================================
 
 const DOCS = [
   {
@@ -630,6 +671,10 @@ const PRODUCT_INFO = {
   }
 };
 
+// ============================================================
+// 4. ДАННЫЕ: ГАЙД И ССЫЛКИ
+// ============================================================
+
 const GUIDE_STEPS = [
   {
     id: "onboarding", title: "Онбординг", subtitle: "7 дней", icon: "🚀", color: "#A78BFA",
@@ -704,6 +749,10 @@ const GUIDE_STEPS = [
   },
 ];
 
+// ============================================================
+// 9. ОБЩИЕ КОМПОНЕНТЫ
+// ============================================================
+
 function AstroSVG({ color, size }) {
   const s = size || 100;
   return (
@@ -749,6 +798,10 @@ function FloatingAstro({ color, size, style }) {
 }
 
 const G = { background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)" };
+
+// ============================================================
+// 11. ТАРИФЫ И ПРОДУКТЫ
+// ============================================================
 
 function ProductAndTariffsView() {
   const [tab, setTab] = useState("products");
@@ -1100,6 +1153,10 @@ function KnowledgeView({ search }) {
   );
 }
 
+// ============================================================
+// 12. AI-ПОМОЩНИК
+// ============================================================
+
 function AIView() {
   const [mode, setMode] = useState("messages");
   const [messages, setMessages] = useState([]);
@@ -1274,6 +1331,10 @@ function AIView() {
   );
 }
 
+// ============================================================
+// 13. ГАЙД И ЧЕКЛИСТ
+// ============================================================
+
 function GuideView() {
   const [activeStep, setActiveStep] = useState(0);
   var step = GUIDE_STEPS[activeStep];
@@ -1368,6 +1429,10 @@ function GuideView() {
 }
 
 
+// ============================================================
+// 14. ПОЛЕЗНЫЕ ССЫЛКИ
+// ============================================================
+
 function LinksView() {
   const [activeTag, setActiveTag] = useState("Все");
   const [search, setSearch] = useState("");
@@ -1443,6 +1508,10 @@ function LinksView() {
     </div>
   );
 }
+
+// ============================================================
+// 10. РАЗДЕЛЫ САЙТА — КУРАТОР
+// ============================================================
 
 function CompanyView() {
   var sectionLabel = { fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 16 };
@@ -1787,7 +1856,9 @@ function ChecklistView() {
   );
 }
 
-// ── РАСПИСАНИЕ СЕССИЙ ДЛЯ МЕНТОРА ─────────────────────────────────────────────
+// ============================================================
+// 17. РАСПИСАНИЕ СЕССИЙ МЕНТОРА
+// ============================================================ ДЛЯ МЕНТОРА ─────────────────────────────────────────────
 function MentorScheduleView({ currentUser }) {
   var today = new Date();
   var fmt = function(d) { return d.toISOString().slice(0, 10); };
@@ -1991,17 +2062,53 @@ function MentorScheduleView({ currentUser }) {
 }
 
 
-const CURATORS = ["Ксюша", "Саша"];
+// ============================================================
+// 5. ДАННЫЕ: КЛИЕНТЫ
+// ============================================================
+
+const CURATORS = ["Xenia Belyntseva", "Alexandra Sheider", "Катя"];
 
 const TARIFF_LABELS = {
-  "take-all": "Take All",
-  "take-all-plus": "Take All+",
-  "vip": "VIP",
-  "comeback-lite": "Comeback Lite",
-  "comeback-pro": "Comeback Pro",
+  "take-all-plus":     "Take All Plus",
+  "take-all-mocks":    "Take All Mocks",
+  "take-all-ass":      "Take All Ass",
+  "take-all-old":      "Take All Old",
+  "take-all-plus-old": "Take All Plus Old",
+  "take-all-ass-old":  "Take All Ass Old",
+  "custom-pack":       "Custom Pack",
+  "strategy-only":     "Strategy",
+  "vip":               "VIP",
+  "vip-old":           "VIP Old",
+  "comeback-lite":     "Comeback Lite",
+  "mentorship-old":    "Mentorship Old",
+  "resume-only":       "Resume",
+  "linkedin-only":     "LinkedIn",
+  "assist-only":       "Assist",
+  "hub-only":          "Hub",
+  "self-serve-old":    "Self Serve Old",
+  "take-all":          "Take All",
 };
 
-// Gantt phases with durations (days from program start)
+const STATUS_STAGES = [
+  { id: "strategy",    label: "М0-1 Страт.",          icon: "🎯", color: "#A78BFA" },
+  { id: "resume",      label: "М2 Резюме",             icon: "📄", color: "#F472B6" },
+  { id: "linkedin",    label: "М3 LinkedIn",           icon: "🔗", color: "#67E8F9" },
+  { id: "automation",  label: "М4 Автом.",             icon: "⚡", color: "#FBBF24" },
+  { id: "learning",    label: "М4 Асс. запущены",      icon: "🤖", color: "#34D399" },
+  { id: "rejections",  label: "М5 Отказы",             icon: "📬", color: "#FB923C" },
+  { id: "screening",   label: "М6 Скрин.",             icon: "🔍", color: "#60A5FA" },
+  { id: "interviews",  label: "М7 Интервью",           icon: "🎤", color: "#818CF8" },
+  { id: "offer_nego",  label: "М8-10 Торги",           icon: "🤝", color: "#34D399" },
+  { id: "support",     label: "Поддержка",             icon: "💙", color: "#67E8F9" },
+  { id: "pause",       label: "Пауза",                 icon: "⏸️", color: "#94A3B8" },
+  { id: "offer",       label: "Оффер",                 icon: "🎉", color: "#34D399" },
+  { id: "offer_fee",   label: "Оффер + %",             icon: "💰", color: "#FBBF24" },
+  { id: "done",        label: "Done",                  icon: "✅", color: "#64748B" },
+  { id: "refund",      label: "Рефанд",                icon: "↩️", color: "#F87171" },
+  { id: "part_refund", label: "Парт-рефанд",           icon: "↪️", color: "#FCA5A5" },
+  { id: "offer_refund",label: "Оффер-рефанд",          icon: "🔄", color: "#FDA4AF" },
+];
+
 const GANTT_PHASES = [
   { key: "onboarding", label: "Онбординг",    icon: "🚀", color: "#A78BFA", start: 0,  dur: 7  },
   { key: "resume",     label: "Резюме",        icon: "📄", color: "#F472B6", start: 5,  dur: 10 },
@@ -2011,28 +2118,13 @@ const GANTT_PHASES = [
 ];
 const TOTAL_DAYS = 60;
 
-// Автоматический переход статуса при завершении фазы
-// "learning" и дальше — только вручную
 const PHASE_AUTO_STATUS = {
-  onboarding: "resume",       // Онбординг → Резюме
-  resume:     "linkedin",     // Резюме → LinkedIn
-  linkedin:   "automation",   // LinkedIn → Автоматизация
-  automation: "learning",     // Автоматизация → Обучение и подачи
-  extras:     null,           // Собесы — вручную
+  onboarding: "resume",
+  resume:     "linkedin",
+  linkedin:   "automation",
+  automation: "learning",
+  extras:     null,
 };
-
-const STATUS_STAGES = [
-  { id: "strategy",    label: "Стратегия",             icon: "🎯", color: "#A78BFA" },
-  { id: "resume",      label: "Резюме",                 icon: "📄", color: "#F472B6" },
-  { id: "linkedin",    label: "LinkedIn",               icon: "🔗", color: "#67E8F9" },
-  { id: "automation",  label: "Автоматизация",          icon: "⚡", color: "#FBBF24" },
-  { id: "learning",    label: "Обучение и подачи",      icon: "📚", color: "#34D399" },
-  { id: "interviews",  label: "Подачи и интервью",      icon: "🎤", color: "#FB923C" },
-  { id: "offer",       label: "Оффер",                  icon: "🎉", color: "#34D399" },
-  { id: "offer_fee",   label: "Оффер + %",              icon: "💰", color: "#FBBF24" },
-  { id: "pause",       label: "Пауза",                  icon: "⏸️", color: "#94A3B8" },
-  { id: "closed",      label: "Окончен без оффера",     icon: "🏁", color: "#64748B" },
-];
 
 const INITIAL_CLIENTS = (function() {
   var today = new Date().toISOString().slice(0, 10);
@@ -2075,6 +2167,10 @@ const INITIAL_CLIENTS = (function() {
 })();
 
 // Supabase client (no npm needed — using REST API directly)
+// ============================================================
+// 8. SUPABASE — РАБОТА С БАЗОЙ ДАННЫХ
+// ============================================================
+
 var SUPABASE_URL = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || "";
 var SUPABASE_KEY = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || "";
 
@@ -2135,71 +2231,117 @@ const EDITORS = [
   "irina-romashkina@go-offer.us",
   "kseniya-belyntseva@go-offer.us",
   "aleksandra-sheider@go-offer.us",
+  "alena.diuriagina@go-offer.us",
 ];
+
+const ROLE_CONFIG = {
+  admin:     { label: "Админ",      color: "#F472B6", icon: "👑", desc: "Полный доступ ко всем разделам" },
+  curator:   { label: "Куратор",    color: "#A78BFA", icon: "🎓", desc: "Полный доступ к базе знаний и клиентам" },
+  assistant: { label: "Ассистент",  color: "#34D399", icon: "⚡", desc: "Карточки своих клиентов и задачи по подачам" },
+  mentor:    { label: "Ментор",     color: "#F472B6", icon: "🧠", desc: "Страт-сессии, LinkedIn, моки, TL;DV" },
+  sales:     { label: "Sales",      color: "#FBBF24", icon: "💼", desc: "Воронка продаж и офферы клиентов" },
+  marketing: { label: "Маркетинг",  color: "#67E8F9", icon: "📣", desc: "Офферы и кейсы для контента" },
+};
+
+const STAFF = [
+  // Админ
+  { email: "irina-romashkina@go-offer.us",   name: "Ирина Ромашкина",   role: "admin" },
+  { email: "alena.diuriagina@go-offer.us",   name: "Алёна Дюрягина",    role: "admin" },
+  // Кураторы
+  { email: "kseniya-belyntseva@go-offer.us", name: "Xenia Belyntseva",  role: "curator" },
+  { email: "aleksandra-sheider@go-offer.us", name: "Alexandra Sheider", role: "curator" },
+  { email: "kira@go-offer.us",               name: "Кира",              role: "curator" },
+  { email: "katya@go-offer.us",              name: "Катя",              role: "curator" },
+  // Менторы
+  { email: "anna-gordeeva@go-offer.us",      name: "Анна Гордеева",     role: "mentor" },
+  { email: "kirill-gugaev@go-offer.us",      name: "Кирилл Гугаев",     role: "mentor" },
+  { email: "luba-zabavskaya@go-offer.us",    name: "Люба Забавская",    role: "mentor" },
+  // Ассистенты
+  { email: "assistant1@go-offer.us",         name: "Ассистент 1",       role: "assistant" },
+  { email: "assistant2@go-offer.us",         name: "Ассистент 2",       role: "assistant" },
+  // Sales
+  { email: "sales@go-offer.us",             name: "Sales Team",         role: "sales" },
+  // Маркетинг
+  { email: "marketing@go-offer.us",         name: "Marketing Team",     role: "marketing" },
+];
+
+// ============================================================
+// 15. КЛИЕНТЫ — КУРАТОР
+// ============================================================
+
+
+// ============================================================
+// 15. КЛИЕНТЫ — КУРАТОР
+// ============================================================
 
 function ClientsView({ currentUser }) {
   var canEdit = currentUser && EDITORS.indexOf(currentUser.email.toLowerCase()) >= 0;
 
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd]     = useState(false);
-  const [selected, setSelected]   = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [activePhase, setActivePhase] = useState(null);
   const [checkedMap, setCheckedMap] = useState({});
   const [commentsMap, setCommentsMap] = useState({});
-  const [editingComment, setEditingComment] = useState(null);
-  const [commentDraft, setCommentDraft] = useState("");
-  const [hoveredPhase, setHoveredPhase] = useState(null);
-  const [activePhase, setActivePhase] = useState(null);
-  const [form, setForm] = useState({
-    name: "", tariff: "take-all",
-    curator: currentUser ? currentUser.name : "Ксюша",
-    startDate: new Date().toISOString().slice(0, 10),
-    status: "strategy",
-    notes: "",
-  });
+  const [openStatusMenu, setOpenStatusMenu] = useState(null);
+
+  // Фильтры
+  const [search, setSearch] = useState("");
   const [filterCurator, setFilterCurator] = useState("Все");
   const [filterStatus, setFilterStatus] = useState("Все");
   const [filterTariff, setFilterTariff] = useState("Все");
-  const [filterDays, setFilterDays] = useState("Все");
   const [filterMentor, setFilterMentor] = useState("Все");
-  const [openStatusMenu, setOpenStatusMenu] = useState(null);
-  const [search, setSearch] = useState("");
+  const [filterDays, setFilterDays] = useState("Все");
+  const [sortCol, setSortCol] = useState("name");
+  const [sortDir, setSortDir] = useState("asc");
 
-  // Load from Supabase on mount
+  // Форма добавления
+  const [form, setForm] = useState({
+    name: "", tariff: "take-all-plus",
+    curator: currentUser ? currentUser.name : "Xenia Belyntseva",
+    startDate: new Date().toISOString().slice(0, 10),
+    status: "strategy", notes: "", mentor: "",
+  });
+
   useEffect(function() {
     sbLoadClients().then(function(data) {
       if (data) {
         setClients(data.clients);
         setCheckedMap(data.checkedMap);
         setCommentsMap(data.commentsMap);
-      } else {
-        // fallback: load INITIAL_CLIENTS into Supabase
-        var promises = INITIAL_CLIENTS.map(function(c) { return sbSaveClient(c, {}, {}); });
-        Promise.all(promises).then(function() {
-          setClients(INITIAL_CLIENTS);
-        });
       }
       setLoading(false);
     }).catch(function() { setLoading(false); });
   }, []);
 
-  var tariffColors = {
-    "take-all": "#A78BFA", "take-all-plus": "#F472B6", "vip": "#FBBF24",
-    "comeback-lite": "#34D399", "comeback-pro": "#67E8F9",
-  };
+  useEffect(function() {
+    if (!openStatusMenu) return;
+    function handleClick() { setOpenStatusMenu(null); }
+    document.addEventListener("click", handleClick);
+    return function() { document.removeEventListener("click", handleClick); };
+  }, [openStatusMenu]);
+
+  function daysSinceStart(client) {
+    var start = new Date(client.startDate);
+    var now = new Date();
+    return Math.max(0, Math.floor((now - start) / 86400000));
+  }
 
   function addClient() {
     if (!form.name.trim()) return;
     var newClient = {
       id: "c" + Date.now(), name: form.name.trim(), tariff: form.tariff,
       curator: form.curator, startDate: form.startDate,
-      status: form.status, notes: form.notes,
-      mentor: form.mentor || "",
-      assistant: "", workEmail: "", workPassword: "", resumeUrl: "", totalApps: 0, doneApps: 0,
+      status: form.status, notes: form.notes, mentor: form.mentor || "",
+      assistant: "", workEmail: "", workPassword: "", resumeUrl: "",
+      totalApps: 0, doneApps: 0, archived: false,
+      title: "", location: "", linkedinUrl: "", telegram: "", week: 0,
     };
     sbSaveClient(newClient, {}, {});
     setClients(function(p) { return p.concat([newClient]); });
-    setForm({ name: "", tariff: "take-all", curator: currentUser ? currentUser.name : "Ксюша", startDate: new Date().toISOString().slice(0, 10), status: "strategy", notes: "", mentor: "" });
+    setForm({ name: "", tariff: "take-all-plus", curator: currentUser ? currentUser.name : "Xenia Belyntseva", startDate: new Date().toISOString().slice(0, 10), status: "strategy", notes: "", mentor: "" });
     setShowAdd(false);
   }
 
@@ -2207,126 +2349,6 @@ function ClientsView({ currentUser }) {
     sbDeleteClient(id);
     setClients(function(p) { return p.filter(function(c) { return c.id !== id; }); });
     if (selected && selected.id === id) setSelected(null);
-  }
-
-  function toggleCheck(clientId, itemId) {
-    var key = clientId + "_" + itemId;
-    setCheckedMap(function(p) {
-      var n = Object.assign({}, p);
-      n[key] = !p[key];
-
-      // Проверяем — завершилась ли фаза целиком
-      var client = clients.find(function(c) { return c.id === clientId; });
-      if (client && n[key]) {
-        var cl = TARIFF_CHECKLISTS[client.tariff] || {};
-        GANTT_PHASES.forEach(function(ph) {
-          var nextStatus = PHASE_AUTO_STATUS[ph.key];
-          if (!nextStatus) return; // нет автоперехода
-          var phItems = cl[ph.key] || [];
-          if (!phItems.length) return;
-          var allDone = phItems.every(function(it) { return n[clientId + "_" + it.id]; });
-          if (allDone) {
-            // Двигаем только вперёд по воронке
-            var statusOrder = ["strategy","resume","linkedin","automation","learning","interviews","offer","offer_fee"];
-            var curIdx = statusOrder.indexOf(client.status);
-            var nextIdx = statusOrder.indexOf(nextStatus);
-            if (nextIdx > curIdx) {
-              setClients(function(prev) {
-                var updated = prev.map(function(c) {
-                  return c.id === clientId ? Object.assign({}, c, { status: nextStatus }) : c;
-                });
-                var updClient = updated.find(function(c) { return c.id === clientId; });
-                if (updClient) sbSaveClient(updClient, n, commentsMap);
-                return updated;
-              });
-              if (selected && selected.id === clientId) {
-                setSelected(function(s) { return Object.assign({}, s, { status: nextStatus }); });
-              }
-            }
-          }
-        });
-      }
-
-      var cl2 = selected ? TARIFF_CHECKLISTS[selected.tariff] : null;
-      if (cl2) {
-        var updClient2 = clients.find(function(c) { return c.id === clientId; });
-        if (updClient2) setTimeout(function() { sbSaveClient(updClient2, n, commentsMap); }, 300);
-      }
-      return n;
-    });
-  }
-
-  function togglePhaseAll(clientId, phaseKey) {
-    var cl = TARIFF_CHECKLISTS[selected && selected.tariff];
-    if (!cl) return;
-    var items = cl[phaseKey] || [];
-    if (!items.length) return;
-    var allDone = items.every(function(it) { return checkedMap[clientId + "_" + it.id]; });
-    setCheckedMap(function(p) {
-      var n = Object.assign({}, p);
-      items.forEach(function(it) { n[clientId + "_" + it.id] = !allDone; });
-
-      // Если отмечаем все → проверяем автопереход
-      if (!allDone) {
-        var nextStatus = PHASE_AUTO_STATUS[phaseKey];
-        if (nextStatus) {
-          var client = clients.find(function(c) { return c.id === clientId; });
-          if (client) {
-            var statusOrder = ["strategy","resume","linkedin","automation","learning","interviews","offer","offer_fee"];
-            var curIdx = statusOrder.indexOf(client.status);
-            var nextIdx = statusOrder.indexOf(nextStatus);
-            if (nextIdx > curIdx) {
-              setClients(function(prev) {
-                var updated = prev.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: nextStatus }) : c; });
-                var updClient = updated.find(function(c) { return c.id === clientId; });
-                if (updClient) sbSaveClient(updClient, n, commentsMap);
-                return updated;
-              });
-              if (selected && selected.id === clientId) {
-                setSelected(function(s) { return Object.assign({}, s, { status: nextStatus }); });
-              }
-            }
-          }
-        }
-      }
-
-      var client = clients.find(function(c) { return c.id === clientId; });
-      if (client) setTimeout(function() { sbSaveClient(client, n, commentsMap); }, 300);
-      return n;
-    });
-  }
-
-  function saveComment(clientId, itemId) {
-    var key = clientId + "_" + itemId;
-    setCommentsMap(function(p) {
-      var n = Object.assign({}, p);
-      if (commentDraft.trim()) { n[key] = commentDraft.trim(); } else { delete n[key]; }
-      var client = clients.find(function(c) { return c.id === clientId; });
-      if (client) setTimeout(function() { sbSaveClient(client, checkedMap, n); }, 300);
-      return n;
-    });
-    setEditingComment(null);
-    setCommentDraft("");
-  }
-
-  function getProgress(client) {
-    var cl = TARIFF_CHECKLISTS[client.tariff];
-    if (!cl) return { done: 0, total: 0, byPhase: {} };
-    var byPhase = {};
-    var done = 0, total = 0;
-    GANTT_PHASES.forEach(function(ph) {
-      var items = cl[ph.key] || [];
-      var pDone = items.filter(function(it) { return checkedMap[client.id + "_" + it.id]; }).length;
-      byPhase[ph.key] = { done: pDone, total: items.length };
-      done += pDone; total += items.length;
-    });
-    return { done: done, total: total, byPhase: byPhase };
-  }
-
-  function daysSinceStart(client) {
-    var start = new Date(client.startDate);
-    var now = new Date();
-    return Math.max(0, Math.floor((now - start) / 86400000));
   }
 
   function updateStatus(clientId, newStatus) {
@@ -2341,1332 +2363,523 @@ function ClientsView({ currentUser }) {
     }
   }
 
-  // Close status dropdown on outside click
-  useEffect(function() {
-    if (!openStatusMenu) return;
-    function handleClick() { setOpenStatusMenu(null); }
-    document.addEventListener("click", handleClick);
-    return function() { document.removeEventListener("click", handleClick); };
-  }, [openStatusMenu]);
-
-  if (loading) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, gap: 12 }}>
-        <div style={{ width: 20, height: 20, border: "2px solid rgba(167,139,250,0.3)", borderTop: "2px solid #A78BFA", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-        <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Загружаем клиентов...</span>
-      </div>
-    );
+  function toggleArchive(client) {
+    var updated = Object.assign({}, client, { archived: !client.archived });
+    sbSaveClient(updated, checkedMap, commentsMap);
+    setClients(function(p) { return p.map(function(c) { return c.id === client.id ? updated : c; }); });
   }
 
-  var allCurators = ["Все"].concat(CURATORS);
+  // Активные статусы (не архивные)
+  var ACTIVE_STATUSES = ["strategy","resume","linkedin","automation","learning","rejections","screening","interviews","offer_nego","support","pause"];
+
+  // Воронка — только активные статусы
+  var funnelStages = STATUS_STAGES.filter(function(s) { return ACTIVE_STATUSES.indexOf(s.id) >= 0; });
+
+  // Фильтрация
   var allMentors = ["Все"].concat(Array.from(new Set(clients.map(function(c) { return c.mentor; }).filter(Boolean))));
+  var allTariffs = ["Все"].concat(Array.from(new Set(clients.map(function(c) { return c.tariff; }).filter(Boolean))));
+
   var filtered = clients.filter(function(c) {
+    if (!showArchived && c.archived) return false;
+    if (showArchived && !c.archived) return false;
     var curOk = filterCurator === "Все" || c.curator === filterCurator;
-    var stOk  = filterStatus === "Все" || c.status === filterStatus;
+    var stOk = filterStatus === "Все" || c.status === filterStatus;
     var tarOk = filterTariff === "Все" || c.tariff === filterTariff;
     var mentorOk = filterMentor === "Все" || c.mentor === filterMentor;
+    var searchOk = search === "" || (c.name||"").toLowerCase().indexOf(search.toLowerCase()) >= 0
+      || (c.title||"").toLowerCase().indexOf(search.toLowerCase()) >= 0
+      || (c.curator||"").toLowerCase().indexOf(search.toLowerCase()) >= 0;
     var daysLeft = 180 - daysSinceStart(c);
     var daysOk = filterDays === "Все" ||
       (filterDays === "urgent" && daysLeft <= 14 && daysLeft > 0) ||
       (filterDays === "warning" && daysLeft > 14 && daysLeft <= 30) ||
-      (filterDays === "ok" && daysLeft > 30) ||
-      (filterDays === "over" && daysLeft <= 0);
-    var searchOk = search === "" || c.name.toLowerCase().indexOf(search.toLowerCase()) >= 0;
-    return curOk && stOk && tarOk && mentorOk && daysOk && searchOk;
+      (filterDays === "ok" && daysLeft > 30);
+    return curOk && stOk && tarOk && mentorOk && searchOk && daysOk;
   });
 
-  // ── Detail view (Gantt + checklist) ──────────────────────────────────────
-  if (selected) {
-    var cl = TARIFF_CHECKLISTS[selected.tariff] || {};
-    var tarColor = tariffColors[selected.tariff] || "#A78BFA";
-    var prog = getProgress(selected);
-    var pct = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
-    var elapsed = Math.min(daysSinceStart(selected), TOTAL_DAYS);
-
-    // Данные ментора из localStorage
-    var mentorKey = null;
-    STAFF.forEach(function(s) { if (s.role === "mentor" || s.role === "admin") { if (!mentorKey) mentorKey = "mentor_v2_" + s.email; } });
-    var mentorStorageKeys = STAFF.filter(function(s) { return s.role === "mentor"; }).map(function(s) { return "mentor_v2_" + s.email; });
-    var allMentorData = {};
-    mentorStorageKeys.forEach(function(k) {
-      try { var d = localStorage.getItem(k); if (d) { var p = JSON.parse(d); Object.assign(allMentorData, { checks: Object.assign({}, allMentorData.checks, p.checks), tldv: Object.assign({}, allMentorData.tldv, p.tldv), notes: Object.assign({}, allMentorData.notes, p.notes), extra: Object.assign({}, allMentorData.extra, p.extra) }); } } catch(e) {}
-    });
-    var clientTldvEntries = [];
-    var tldvData = allMentorData.tldv || {};
-    Object.keys(tldvData).forEach(function(k) {
-      if (k.startsWith(selected.id + "_")) clientTldvEntries.push({ key: k, entry: tldvData[k] });
-    });
-    var clientMentorNote = (allMentorData.notes || {})[selected.id] || "";
-
-    return (
-      <div style={{ maxWidth: 960, margin: "0 auto" }}>
-        {/* Back + header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <button onClick={function() { setSelected(null); setActivePhase(null); }}
-            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, padding: "5px 0" }}>← Назад</button>
-          <span style={{ color: "rgba(255,255,255,0.15)" }}>|</span>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{selected.name}</div>
-          <span style={{ fontSize: 11, color: tarColor, background: tarColor + "18", border: "1px solid " + tarColor + "33", padding: "3px 10px", borderRadius: 20, fontWeight: 700 }}>{TARIFF_LABELS[selected.tariff]}</span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.06)", padding: "3px 10px", borderRadius: 20 }}>👤 {selected.curator}</span>
-          {selected.mentor && <span style={{ fontSize: 11, color: "#F472B6", background: "rgba(244,114,182,0.1)", padding: "3px 10px", borderRadius: 20 }}>🧠 {selected.mentor}</span>}
-          {/* Назначить/сменить ментора */}
-          <select value={selected.mentor || ""} onChange={function(e) {
-            var newMentor = e.target.value;
-            setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? Object.assign({}, c, { mentor: newMentor }) : c; }); });
-            setSelected(function(s) { return Object.assign({}, s, { mentor: newMentor }); });
-            var upd = Object.assign({}, selected, { mentor: newMentor });
-            sbSaveClient(upd, checkedMap, commentsMap);
-          }} style={{ fontSize: 11, background: "#1a1535", border: "1px solid rgba(244,114,182,0.3)", borderRadius: 8, padding: "3px 10px", color: selected.mentor ? "#F472B6" : "rgba(255,255,255,0.3)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
-            <option value="">🧠 Назначить ментора</option>
-            {STAFF.filter(function(s) { return s.role === "mentor"; }).map(function(s) { return <option key={s.email} value={s.name}>{s.name}</option>; })}
-          </select>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "4px 10px" }}>
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>📅 Старт:</span>
-            <input type="date" value={selected.startDate}
-              onChange={function(e) {
-                var newDate = e.target.value;
-                setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? Object.assign({}, c, { startDate: newDate }) : c; }); });
-                setSelected(function(s) { return Object.assign({}, s, { startDate: newDate }); });
-              }}
-              style={{ background: "transparent", border: "none", color: "#fff", fontSize: 12, fontWeight: 600, outline: "none", cursor: "pointer", fontFamily: "inherit" }} />
-          </div>
-        </div>
-
-        {/* Вкладки детального просмотра */}
-        {(function() {
-          var detailTabs = [
-            { id: "progress", label: "Прогресс", icon: "📊" },
-            { id: "mentor", label: "Ментор", icon: "🧠", badge: clientTldvEntries.length > 0 ? clientTldvEntries.length : null },
-          ];
-          var curDetailTab = selected._detailTab || "progress";
-          return (
-            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-              {detailTabs.map(function(tab) {
-                var active = curDetailTab === tab.id;
-                return (
-                  <button key={tab.id} onClick={function() { setSelected(function(s) { return Object.assign({}, s, { _detailTab: tab.id }); }); }}
-                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: active ? "1px solid rgba(167,139,250,0.4)" : "1px solid rgba(255,255,255,0.08)", background: active ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.03)", color: active ? "#A78BFA" : "rgba(255,255,255,0.4)", fontWeight: active ? 700 : 400, fontSize: 13, cursor: "pointer" }}>
-                    {tab.icon} {tab.label}
-                    {tab.badge && <span style={{ fontSize: 10, background: "rgba(251,191,36,0.2)", color: "#FBBF24", padding: "1px 6px", borderRadius: 10 }}>{tab.badge}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })()}
-
-        {/* Вкладка Ментор */}
-        {(selected._detailTab === "mentor") && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {/* TL;DV */}
-            <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: 14, padding: "16px 18px" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#FBBF24", marginBottom: 12 }}>🎬 TL;DV записи</div>
-              {clientTldvEntries.length === 0 ? (
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>Ментор ещё не добавил записи</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {clientTldvEntries.map(function(item) {
-                    var e = item.entry;
-                    var typeLabel = item.key.includes("_strategy_") ? "🎯 Страт-сессия" : item.key.includes("_mock_") ? "🎤 Мок" : "📌";
-                    var slotNum = item.key.match(/_(\d+)$/) ? parseInt(item.key.match(/_(\d+)$/)[1]) + 1 : "";
-                    return (
-                      <div key={item.key} style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: 10, padding: "12px 14px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                          <span style={{ fontSize: 11, color: "#FBBF24", fontWeight: 600 }}>{typeLabel} #{slotNum}</span>
-                          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{e.date}</span>
-                        </div>
-                        <a href={e.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#FBBF24", textDecoration: "none", display: "block", marginBottom: 4, wordBreak: "break-all" }}>
-                          🔗 {e.url.length > 60 ? e.url.slice(0, 60) + "..." : e.url}
-                        </a>
-                        {e.desc && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>📝 {e.desc}</div>}
-                        {e.note && <div style={{ fontSize: 12, color: "#34D399", background: "rgba(52,211,153,0.08)", borderRadius: 6, padding: "5px 9px" }}>✨ Для резюме: {e.note}</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Заметки ментора */}
-            <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(244,114,182,0.15)", borderRadius: 14, padding: "16px 18px" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#F472B6", marginBottom: 10 }}>📝 Заметки ментора</div>
-              {clientMentorNote ? (
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{clientMentorNote}</div>
-              ) : (
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>Ментор ещё не добавил заметки</div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Вкладка Прогресс (весь старый контент) */}
-        {(!selected._detailTab || selected._detailTab === "progress") && (<div>
-
-        {/* Status funnel strip */}
-        <div style={{ display: "flex", gap: 3, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
-          {STATUS_STAGES.map(function(st, idx) {
-            var isActive = selected.status === st.id;
-            var isFinal = st.id === "offer" || st.id === "offer_fee" || st.id === "closed";
-            return (
-              <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
-                <button
-                  onClick={function() { updateStatus(selected.id, st.id); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
-                    background: isActive ? st.color + "25" : "rgba(255,255,255,0.03)",
-                    border: "1px solid " + (isActive ? st.color + "88" : "rgba(255,255,255,0.08)"),
-                    borderRadius: 8, color: isActive ? st.color : "rgba(255,255,255,0.4)",
-                    fontSize: 12, fontWeight: isActive ? 700 : 400, cursor: "pointer",
-                    boxShadow: "none",
-                    transition: "all 0.15s", whiteSpace: "nowrap",
-                  }}>
-                  <span>{st.icon}</span>
-                  <span>{st.label}</span>
-                </button>
-                {idx < STATUS_STAGES.length - 1 && !isFinal && st.id !== "interviews" ? (
-                  <div style={{ width: 16, height: 1, background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Overall progress */}
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 13, padding: "14px 20px", marginBottom: 16 }}>
-          <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 14 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Общий прогресс: <span style={{ color: tarColor, fontWeight: 700 }}>{prog.done}/{prog.total}</span></span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: pct === 100 ? "#34D399" : tarColor }}>{pct}%</span>
-              </div>
-              <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99 }}>
-                <div style={{ height: "100%", width: pct + "%", background: "linear-gradient(90deg," + tarColor + "," + tarColor + "88)", borderRadius: 99, transition: "width 0.4s", boxShadow: "none" }} />
-              </div>
-            </div>
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Ганта день</div>
-              <div style={{ fontSize: 20, fontWeight: 900, color: elapsed >= TOTAL_DAYS ? "#34D399" : "#fff" }}>{elapsed}<span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>/{TOTAL_DAYS}</span></div>
-            </div>
-          </div>
-
-          {/* 180-day program timeline */}
-          {(function() {
-            var totalDays = 180;
-            var daysIn = daysSinceStart(selected);
-            var daysLeft = totalDays - daysIn;
-            var pct180 = Math.min(100, Math.round(daysIn / totalDays * 100));
-            var isOver = daysIn >= totalDays;
-            var isWarning = !isOver && daysLeft <= 30;
-            var isUrgent = !isOver && daysLeft <= 14;
-            var barColor = isOver ? "#64748B" : isUrgent ? "#F87171" : isWarning ? "#FBBF24" : "#34D399";
-            return (
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>📅 Программа (180 дней)</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: barColor }}>
-                    {isOver ? "Программа завершена" : "День " + daysIn + " · осталось " + daysLeft + " дн."}
-                  </span>
-                </div>
-                <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: pct180 + "%", background: "linear-gradient(90deg," + barColor + "," + barColor + "99)", borderRadius: 99, transition: "width 0.4s" }} />
-                </div>
-                {(isWarning || isUrgent) && (
-                  <div style={{ marginTop: 8, padding: "8px 12px", background: isUrgent ? "rgba(248,113,113,0.08)" : "rgba(251,191,36,0.08)", border: "1px solid " + (isUrgent ? "rgba(248,113,113,0.3)" : "rgba(251,191,36,0.3)"), borderRadius: 8, fontSize: 12, color: barColor, display: "flex", gap: 7, alignItems: "center" }}>
-                    <span>{isUrgent ? "🔴" : "⚠️"}</span>
-                    <span>{isUrgent ? "Критично: до конца программы меньше 2 недель!" : "Внимание: до конца программы меньше месяца"}</span>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* ── GANTT CHART ─────────────────────────────────────── */}
-        <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden", marginBottom: 14 }}>
-          <div style={{ padding: "13px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>📊 Диаграмма Ганта</div>
-            {activePhase ? (
-              <button onClick={function() { setActivePhase(null); }}
-                style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>
-                ✕ Закрыть детали
-              </button>
-            ) : <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Нажми на фазу чтобы открыть задачи</span>}
-          </div>
-
-          <div style={{ padding: "16px 20px" }}>
-            {/* Day axis */}
-            <div style={{ display: "flex", marginBottom: 6, paddingLeft: 120 }}>
-              {[0, 10, 20, 30, 40, 50, 60].map(function(d) {
-                return (
-                  <div key={d} style={{ flex: d === 60 ? 0 : 1, fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "left" }}>
-                    {d === 0 ? "Старт" : "д." + d}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Phase rows */}
-            {GANTT_PHASES.map(function(ph) {
-              var phItems = cl[ph.key] || [];
-              var phProg = prog.byPhase[ph.key] || { done: 0, total: 0 };
-              var phPct = phProg.total ? Math.round(phProg.done / phProg.total * 100) : 0;
-              var isActive = activePhase === ph.key;
-              var isHovered = hoveredPhase === ph.key;
-              // Bar geometry
-              var leftPct = (ph.start / TOTAL_DAYS) * 100;
-              var widthPct = (ph.dur / TOTAL_DAYS) * 100;
-              // Elapsed within this phase
-              var phElapsed = Math.min(Math.max(0, elapsed - ph.start), ph.dur);
-              var phElapsedPct = ph.dur > 0 ? (phElapsed / ph.dur) * 100 : 0;
-
-              return (
-                <div key={ph.key} style={{ marginBottom: 6 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 0, cursor: "pointer" }}
-                    onMouseEnter={function() { setHoveredPhase(ph.key); }}
-                    onMouseLeave={function() { setHoveredPhase(null); }}
-                    onClick={function() { setActivePhase(isActive ? null : ph.key); }}>
-                    {/* Label */}
-                    <div style={{ width: 120, flexShrink: 0, display: "flex", alignItems: "center", gap: 7, paddingRight: 10 }}>
-                      <span style={{ fontSize: 13 }}>{ph.icon}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: isActive ? ph.color : "rgba(255,255,255,0.6)", transition: "color 0.15s" }}>{ph.label}</span>
-                    </div>
-                    {/* Track */}
-                    <div style={{ flex: 1, height: 28, background: "rgba(255,255,255,0.04)", borderRadius: 6, position: "relative", overflow: "hidden" }}>
-                      {/* Phase bar */}
-                      <div style={{
-                        position: "absolute", top: 3, bottom: 3,
-                        left: leftPct + "%", width: widthPct + "%",
-                        background: isActive || isHovered ? ph.color + "40" : ph.color + "25",
-                        border: "1px solid " + ph.color + (isActive ? "cc" : "66"),
-                        borderRadius: 4, transition: "all 0.2s", overflow: "hidden",
-                      }}>
-                        {/* Fill = done % of phase */}
-                        <div style={{ position: "absolute", inset: 0, width: phPct + "%", background: ph.color + "55", borderRadius: 4, transition: "width 0.4s" }} />
-                        {/* Label inside bar */}
-                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", paddingLeft: 6, fontSize: 10, fontWeight: 700, color: ph.color, whiteSpace: "nowrap", zIndex: 1 }}>
-                          {phProg.done}/{phProg.total} {phPct === 100 ? "✓" : ""}
-                        </div>
-                      </div>
-                      {/* Today marker */}
-                      {elapsed <= TOTAL_DAYS ? (
-                        <div style={{ position: "absolute", top: 0, bottom: 0, left: (elapsed / TOTAL_DAYS * 100) + "%", width: 2, background: "#F472B6", opacity: 0.7, zIndex: 5 }} />
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Drill-down tasks */}
-                  {isActive && phItems.length > 0 ? (
-                    <div style={{ marginTop: 8, marginLeft: 120, background: "rgba(255,255,255,0.03)", border: "1px solid " + ph.color + "33", borderRadius: 10, overflow: "hidden" }}>
-                      {/* Phase header with bulk-check */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: ph.color, textTransform: "uppercase", letterSpacing: "0.5px" }}>{ph.icon} {ph.label}</div>
-                        <button onClick={function() { togglePhaseAll(selected.id, ph.key); }}
-                          style={{ fontSize: 11, fontWeight: 600, color: phPct === 100 ? "rgba(255,255,255,0.3)" : ph.color, background: ph.color + "15", border: "1px solid " + ph.color + "40", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>
-                          {phPct === 100 ? "Снять все" : "Отметить все ✓"}
-                        </button>
-                      </div>
-                      {phItems.map(function(item, idx) {
-                        var done = !!checkedMap[selected.id + "_" + item.id];
-                        var commentKey = selected.id + "_" + item.id;
-                        var comment = commentsMap[commentKey] || "";
-                        var isEditing = editingComment === item.id;
-
-                        return (
-                          <div key={item.id} style={{ borderBottom: idx < phItems.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: 11, padding: "10px 14px" }}>
-                              {/* Checkbox */}
-                              <div onClick={function() { toggleCheck(selected.id, item.id); }}
-                                style={{ width: 18, height: 18, borderRadius: 5, border: "1.5px solid " + (done ? ph.color : "rgba(255,255,255,0.2)"), background: done ? ph.color + "22" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2, cursor: "pointer", transition: "all 0.15s" }}>
-                                {done ? <span style={{ color: ph.color, fontSize: 11, fontWeight: 700 }}>✓</span> : null}
-                              </div>
-                              {/* Text */}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13, color: done ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.8)", textDecoration: done ? "line-through" : "none", lineHeight: 1.5, marginBottom: comment && !isEditing ? 5 : 0 }}>{item.text}</div>
-                                {/* Comment display */}
-                                {comment && !isEditing ? (
-                                  <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: "5px 9px", borderLeft: "2px solid " + ph.color + "55", lineHeight: 1.6, marginTop: 4 }}>
-                                    💬 {comment}
-                                  </div>
-                                ) : null}
-                                {/* Edit comment */}
-                                {isEditing ? (
-                                  <div style={{ marginTop: 6 }}>
-                                    <textarea value={commentDraft} onChange={function(e) { setCommentDraft(e.target.value); }}
-                                      placeholder="Добавь комментарий..."
-                                      rows={2}
-                                      style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid " + ph.color + "44", borderRadius: 7, padding: "7px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "inherit", resize: "none", lineHeight: 1.5 }}
-                                      autoFocus />
-                                    <div style={{ display: "flex", gap: 6, marginTop: 5 }}>
-                                      <button onClick={function() { saveComment(selected.id, item.id); }}
-                                        style={{ padding: "4px 12px", background: ph.color, border: "none", borderRadius: 6, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Сохранить</button>
-                                      <button onClick={function() { setEditingComment(null); setCommentDraft(""); }}
-                                        style={{ padding: "4px 10px", background: "rgba(255,255,255,0.07)", border: "none", borderRadius: 6, color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer" }}>Отмена</button>
-                                    </div>
-                                  </div>
-                                ) : null}
-                              </div>
-                              {/* Comment button */}
-                              {!isEditing ? (
-                                <button
-                                  onClick={function() { setEditingComment(item.id); setCommentDraft(comment); }}
-                                  title={comment ? "Редактировать комментарий" : "Добавить комментарий"}
-                                  style={{ flexShrink: 0, background: comment ? ph.color + "20" : "rgba(255,255,255,0.05)", border: "1px solid " + (comment ? ph.color + "44" : "rgba(255,255,255,0.08)"), borderRadius: 6, padding: "3px 8px", fontSize: 11, color: comment ? ph.color : "rgba(255,255,255,0.3)", cursor: "pointer" }}>
-                                  {comment ? "✏️" : "💬"}
-                                </button>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-
-            {/* Legend */}
-            <div style={{ display: "flex", gap: 16, marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-                <div style={{ width: 12, height: 3, background: "#F472B6", borderRadius: 2 }} /> Сегодня (день {elapsed})
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-                <div style={{ width: 12, height: 8, background: "rgba(255,255,255,0.2)", borderRadius: 2 }} /> Фаза
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-                <div style={{ width: 12, height: 8, background: "rgba(167,139,250,0.5)", borderRadius: 2 }} /> Выполнено
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Notes */}
-        {selected.notes ? (
-          <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 11, padding: "12px 16px", fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.7 }}>
-            📝 {selected.notes}
-          </div>
-        ) : null}
-
-        {/* ── Блоки ментора ─────────────────────────────────────── */}
-        {(function() {
-          // Собираем данные всех менторов из localStorage
-          var mentorData = { tldv: {}, notes: {} };
-          STAFF.filter(function(s) { return s.role === "mentor"; }).forEach(function(s) {
-            try {
-              var d = localStorage.getItem("mentor_v2_" + s.email);
-              if (d) {
-                var p = JSON.parse(d);
-                Object.assign(mentorData.tldv, p.tldv || {});
-                Object.assign(mentorData.notes, p.notes || {});
-              }
-            } catch(e) {}
-          });
-
-          var clientNote = mentorData.notes[selected.id] || "";
-
-          // Группируем TL;DV по типу сессии
-          var stratTldv = [], mockTldv = [];
-          Object.keys(mentorData.tldv).forEach(function(k) {
-            if (!k.startsWith(selected.id + "_")) return;
-            var entry = mentorData.tldv[k];
-            if (k.includes("_strategy_")) stratTldv.push({ key: k, entry: entry, num: parseInt(k.match(/_(\d+)$/)?.[1] || 0) + 1 });
-            else if (k.includes("_mock_")) mockTldv.push({ key: k, entry: entry, num: parseInt(k.match(/_(\d+)$/)?.[1] || 0) + 1 });
-          });
-          stratTldv.sort(function(a, b) { return a.num - b.num; });
-          mockTldv.sort(function(a, b) { return a.num - b.num; });
-
-          function TldvEntry({ item, color }) {
-            var e = item.entry;
-            return (
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 9, padding: "11px 14px", marginBottom: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: color }}>Сессия #{item.num}</span>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{e.date}</span>
-                </div>
-                <a href={e.url} target="_blank" rel="noreferrer"
-                  style={{ fontSize: 12, color: "#FBBF24", textDecoration: "none", display: "block", marginBottom: e.desc || e.note ? 6 : 0, wordBreak: "break-all" }}>
-                  🎬 {e.url.length > 65 ? e.url.slice(0, 65) + "..." : e.url}
-                </a>
-                {e.desc && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: e.note ? 5 : 0 }}>📝 {e.desc}</div>}
-                {e.note && <div style={{ fontSize: 12, color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.15)", borderRadius: 6, padding: "5px 9px" }}>✨ Для резюме: {e.note}</div>}
-              </div>
-            );
-          }
-
-          function CollapsibleSection({ icon, label, color, bgColor, borderColor, count, children }) {
-            var [open, setOpen] = useState(true);
-            return (
-              <div style={{ background: bgColor, border: "1px solid " + borderColor, borderRadius: 13, overflow: "hidden", marginBottom: 10 }}>
-                <div onClick={function() { setOpen(function(p) { return !p; }); }}
-                  style={{ display: "flex", alignItems: "center", gap: 9, padding: "12px 16px", cursor: "pointer", userSelect: "none" }}>
-                  <span style={{ fontSize: 15 }}>{icon}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: color, flex: 1 }}>{label}</span>
-                  {count > 0 && <span style={{ fontSize: 10, color: color, background: color + "20", border: "1px solid " + color + "40", borderRadius: 20, padding: "1px 8px", fontWeight: 700 }}>{count}</span>}
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{open ? "▲" : "▼"}</span>
-                </div>
-                {open && (
-                  <div style={{ padding: "0 16px 14px" }}>
-                    {count === 0
-                      ? <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>Ментор ещё не добавил записи</div>
-                      : children
-                    }
-                  </div>
-                )}
-              </div>
-            );
-          }
-
-          return (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 12 }}>🧠 Материалы от ментора</div>
-
-              <CollapsibleSection icon="🎯" label="Страт-сессии" color="#A78BFA" bgColor="rgba(167,139,250,0.05)" borderColor="rgba(167,139,250,0.2)" count={stratTldv.length}>
-                {stratTldv.map(function(item) { return <TldvEntry key={item.key} item={item} color="#A78BFA" />; })}
-              </CollapsibleSection>
-
-              <CollapsibleSection icon="🎤" label="Моки" color="#FBBF24" bgColor="rgba(251,191,36,0.05)" borderColor="rgba(251,191,36,0.2)" count={mockTldv.length}>
-                {mockTldv.map(function(item) { return <TldvEntry key={item.key} item={item} color="#FBBF24" />; })}
-              </CollapsibleSection>
-
-              <CollapsibleSection icon="📝" label="Заметки ментора" color="#F472B6" bgColor="rgba(244,114,182,0.05)" borderColor="rgba(244,114,182,0.2)" count={clientNote ? 1 : 0}>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{clientNote}</div>
-              </CollapsibleSection>
-            </div>
-          );
-        })()}
-
-        </div>)} {/* end progress tab */}
-      </div>
-    );
-  }
-
-  // ── Funnel counts ──────────────────────────────────────────────────────────
-  var funnelCounts = {};
-  STATUS_STAGES.forEach(function(st) {
-    funnelCounts[st.id] = clients.filter(function(c) { return c.status === st.id; }).length;
+  // Сортировка
+  filtered = filtered.slice().sort(function(a, b) {
+    var va = (a[sortCol] || "").toString().toLowerCase();
+    var vb = (b[sortCol] || "").toString().toLowerCase();
+    if (sortCol === "week") { va = parseInt(a.week)||0; vb = parseInt(b.week)||0; return sortDir === "asc" ? va-vb : vb-va; }
+    if (sortCol === "days") { va = daysSinceStart(a); vb = daysSinceStart(b); return sortDir === "asc" ? va-vb : vb-va; }
+    return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
   });
 
-  // ── List view ─────────────────────────────────────────────────────────────
-  return (
-    <div style={{ maxWidth: 960, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
-        <div>
-          <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>Клиенты</h1>
-          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Воронка, статусы и диаграмма Ганта по каждому менти</p>
-        </div>
-        <button onClick={function() { setShowAdd(true); }}
-          style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", background: "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", boxShadow: "none" }}>
-          + Добавить клиента
-        </button>
-      </div>
-
-      {/* ── FUNNEL ─────────────────────────────────────────────── */}
-      {clients.length > 0 ? (
-        <div style={{ position: "sticky", top: 0, zIndex: 10, marginBottom: 18, background: "rgba(14,10,30,0.92)", backdropFilter: "blur(12px)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px", overflowX: "auto" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 12 }}>Воронка клиентов</div>
-          <div style={{ display: "flex", alignItems: "stretch", gap: 3, minWidth: "fit-content" }}>
-            {STATUS_STAGES.map(function(st, idx) {
-              var count = funnelCounts[st.id] || 0;
-              var isSelected = filterStatus === st.id;
-              var isSeparate = st.id === "pause" || st.id === "closed";
-              return (
-                <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                  {isSeparate && idx > 0 ? <div style={{ width: 1, height: 40, background: "rgba(255,255,255,0.08)", margin: "0 4px" }} /> : null}
-                  <button
-                    onClick={function() { setFilterStatus(isSelected ? "Все" : st.id); }}
-                    style={{
-                      display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                      padding: "8px 12px", borderRadius: 10,
-                      background: isSelected ? st.color + "20" : count > 0 ? "rgba(255,255,255,0.04)" : "transparent",
-                      border: "1px solid " + (isSelected ? st.color + "66" : count > 0 ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)"),
-                      cursor: "pointer", transition: "all 0.15s", minWidth: 72,
-                    }}>
-                    <div style={{ fontSize: 16 }}>{st.icon}</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: count > 0 ? st.color : "rgba(255,255,255,0.15)", lineHeight: 1 }}>{count}</div>
-                    <div style={{ fontSize: 9, color: isSelected ? st.color : "rgba(255,255,255,0.3)", fontWeight: isSelected ? 700 : 400, textAlign: "center", lineHeight: 1.3, maxWidth: 68 }}>{st.label}</div>
-                  </button>
-                  {idx < STATUS_STAGES.length - 1 && !isSeparate && STATUS_STAGES[idx+1].id !== "pause" && STATUS_STAGES[idx+1].id !== "closed" ? (
-                    <div style={{ color: "rgba(255,255,255,0.12)", fontSize: 14, flexShrink: 0 }}>›</div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-          {filterStatus !== "Все" ? (
-            <div style={{ marginTop: 10, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-              Фильтр: {STATUS_STAGES.find(function(s) { return s.id === filterStatus; }).label} — {filtered.length} клиент(ов)
-              <button onClick={function() { setFilterStatus("Все"); }} style={{ marginLeft: 8, color: "#A78BFA", background: "none", border: "none", cursor: "pointer", fontSize: 11 }}>✕ сбросить</button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* Add modal */}
-      {showAdd ? (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
-          onClick={function(e) { if (e.target === e.currentTarget) setShowAdd(false); }}>
-          <div style={{ background: "#0f0b24", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 18, padding: "28px 26px", width: 440 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 20 }}>Новый клиент</div>
-
-            {[
-              { label: "Имя", field: "name", type: "input", placeholder: "Имя Фамилия" },
-            ].map(function(f) {
-              return (
-                <div key={f.field} style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 7 }}>{f.label}</div>
-                  <input value={form[f.field]} onChange={function(e) { var v = e.target.value; setForm(function(p) { var n = Object.assign({}, p); n[f.field] = v; return n; }); }}
-                    placeholder={f.placeholder}
-                    style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "10px 12px", fontSize: 14, color: "#fff", outline: "none", fontFamily: "inherit" }} />
-                </div>
-              );
-            })}
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 7 }}>Тарифный план</div>
-                <select value={form.tariff} onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { tariff: v }); }); }}
-                  style={{ width: "100%", background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "10px 12px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
-                  {Object.entries(TARIFF_LABELS).map(function(e2) { return <option key={e2[0]} value={e2[0]}>{e2[1]}</option>; })}
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 7 }}>Куратор</div>
-                <select value={form.curator} onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { curator: v }); }); }}
-                  style={{ width: "100%", background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "10px 12px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
-                  {CURATORS.map(function(c) { return <option key={c} value={c}>{c}</option>; })}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 7 }}>Ментор</div>
-              <select value={form.mentor || ""} onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { mentor: v }); }); }}
-                style={{ width: "100%", background: "#1a1535", border: "1px solid rgba(244,114,182,0.25)", borderRadius: 9, padding: "10px 12px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
-                <option value="">— Не назначен</option>
-                {STAFF.filter(function(s) { return s.role === "mentor"; }).map(function(s) { return <option key={s.email} value={s.name}>{s.name}</option>; })}
-              </select>
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 7 }}>Дата старта программы</div>
-              <input type="date" value={form.startDate} onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { startDate: v }); }); }}
-                style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "10px 12px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit" }} />
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 7 }}>Статус</div>
-              <select value={form.status} onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { status: v }); }); }}
-                style={{ width: "100%", background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "10px 12px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
-                {STATUS_STAGES.map(function(s) { return <option key={s.id} value={s.id}>{s.icon} {s.label}</option>; })}
-              </select>
-            </div>
-
-            <div style={{ marginBottom: 22 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 7 }}>Заметки (опционально)</div>
-              <textarea value={form.notes} onChange={function(e) { var v = e.target.value; setForm(function(p) { return Object.assign({}, p, { notes: v }); }); }}
-                placeholder="Тайтл, особенности, важные детали..." rows={3}
-                style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "10px 12px", fontSize: 13, color: "#fff", outline: "none", fontFamily: "inherit", resize: "none", lineHeight: 1.5 }} />
-            </div>
-
-            <div style={{ display: "flex", gap: 9 }}>
-              <button onClick={function() { setShowAdd(false); }} style={{ flex: 1, padding: "11px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "rgba(255,255,255,0.5)", fontSize: 14, cursor: "pointer" }}>Отмена</button>
-              <button onClick={addClient} disabled={!form.name.trim()}
-                style={{ flex: 2, padding: "11px", background: form.name.trim() ? "linear-gradient(135deg,#A78BFA,#7C3AED)" : "rgba(167,139,250,0.3)", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, cursor: form.name.trim() ? "pointer" : "default" }}>
-                Добавить клиента
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Filters */}
-      <div style={{ display: "flex", gap: 9, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 9, padding: "7px 11px", flex: 1, minWidth: 160 }}>
-          <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 12 }}>🔍</span>
-          <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Поиск по имени..."
-            style={{ background: "none", border: "none", outline: "none", fontSize: 13, color: "#fff", width: "100%", fontFamily: "inherit" }} />
-        </div>
-        <select value={filterCurator} onChange={function(e) { setFilterCurator(e.target.value); }}
-          style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
-          {allCurators.map(function(c) { return <option key={c} value={c}>{c === "Все" ? "Все кураторы" : "👤 " + c}</option>; })}
-        </select>
-        <select value={filterMentor} onChange={function(e) { setFilterMentor(e.target.value); }}
-          style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
-          {allMentors.map(function(m) { return <option key={m} value={m}>{m === "Все" ? "Все менторы" : "🧠 " + m}</option>; })}
-        </select>
-        <select value={filterTariff} onChange={function(e) { setFilterTariff(e.target.value); }}
-          style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
-          <option value="Все">Все тарифы</option>
-          <option value="take-all">Take All</option>
-          <option value="take-all-plus">Take All+</option>
-          <option value="vip">VIP</option>
-          <option value="comeback-lite">Comeback Lite</option>
-          <option value="comeback-pro">Comeback Pro</option>
-        </select>
-        <select value={filterDays} onChange={function(e) { setFilterDays(e.target.value); }}
-          style={{ background: "#1a1535", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, padding: "8px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
-          <option value="Все">Все сроки</option>
-          <option value="urgent">🔴 Критично (до 14 дн.)</option>
-          <option value="warning">⚠️ Скоро (до 30 дн.)</option>
-          <option value="ok">✅ В норме (30+ дн.)</option>
-          <option value="over">🏁 Завершена</option>
-        </select>
-        {(filterCurator !== "Все" || filterStatus !== "Все" || filterTariff !== "Все" || filterDays !== "Все" || filterMentor !== "Все" || search !== "") ? (
-          <button onClick={function() { setFilterCurator("Все"); setFilterStatus("Все"); setFilterTariff("Все"); setFilterDays("Все"); setFilterMentor("Все"); setSearch(""); }}
-            style={{ fontSize: 12, color: "#F87171", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 9, padding: "8px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>
-            ✕ Сбросить всё
-          </button>
-        ) : null}
-      </div>
-
-      {/* Empty state */}
-      {clients.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.25)" }}>
-          <div style={{ fontSize: 42, marginBottom: 14 }}>👥</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>Список клиентов пуст</div>
-          <div style={{ fontSize: 13 }}>Нажми «+ Добавить клиента» чтобы начать</div>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.25)", fontSize: 14 }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>Ничего не найдено
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-          {filtered.map(function(client) {
-            var tarColor = tariffColors[client.tariff] || "#A78BFA";
-            var prog = getProgress(client);
-            var pct = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
-            var elapsed = Math.min(daysSinceStart(client), TOTAL_DAYS);
-
-            return (
-              <div key={client.id}
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid " + tarColor + "22", borderRadius: 14, padding: "0", cursor: "pointer", transition: "all 0.15s", position: "relative" }}
-                onMouseEnter={function(e) { e.currentTarget.style.borderColor = tarColor + "55"; }}
-                onMouseLeave={function(e) { e.currentTarget.style.borderColor = tarColor + "22"; }}
-                onClick={function() { setSelected(client); setActivePhase(null); }}>
-
-                {/* Status bar on top */}
-                {(function() {
-                  var st = STATUS_STAGES.find(function(s) { return s.id === client.status; }) || STATUS_STAGES[0];
-                  return <div style={{ height: 3, background: "linear-gradient(90deg," + st.color + "," + st.color + "44)", borderRadius: "14px 14px 0 0" }} />;
-                })()}
-
-                {/* Top row */}
-                <div style={{ display: "flex", alignItems: "center", gap: 13, padding: "12px 18px" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: tarColor + "22", border: "1.5px solid " + tarColor + "44", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: tarColor, flexShrink: 0 }}>{client.name.charAt(0)}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 5 }}>{client.name}</div>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 11, color: tarColor, background: tarColor + "15", border: "1px solid " + tarColor + "30", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{TARIFF_LABELS[client.tariff]}</span>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>👤 {client.curator}</span>
-                      {client.mentor && <span style={{ fontSize: 11, color: "#F472B6", background: "rgba(244,114,182,0.1)", border: "1px solid rgba(244,114,182,0.2)", padding: "1px 7px", borderRadius: 20 }}>🧠 {client.mentor}</span>}
-                      {(function() {
-                        var st = STATUS_STAGES.find(function(s) { return s.id === client.status; }) || STATUS_STAGES[0];
-                        var isOpen = openStatusMenu === client.id;
-                        return (
-                          <div style={{ position: "relative" }}>
-                            <span
-                              onClick={function(e) { e.stopPropagation(); setOpenStatusMenu(isOpen ? null : client.id); }}
-                              style={{ fontSize: 11, color: st.color, background: st.color + "15", border: "1px solid " + st.color + "30", padding: "2px 8px", borderRadius: 20, fontWeight: 600, cursor: "pointer", userSelect: "none" }}>
-                              {st.icon} {st.label} ▾
-                            </span>
-                            {isOpen ? (
-                              <div
-                                onClick={function(e) { e.stopPropagation(); }}
-                                style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 100, background: "#1a1535", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, overflow: "hidden", minWidth: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.6)", whiteSpace: "nowrap" }}>
-                                {STATUS_STAGES.map(function(s) {
-                                  var isActive = client.status === s.id;
-                                  return (
-                                    <div key={s.id}
-                                      onClick={function() { updateStatus(client.id, s.id); setOpenStatusMenu(null); }}
-                                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 13px", cursor: "pointer", background: isActive ? s.color + "18" : "transparent", borderLeft: isActive ? "2px solid " + s.color : "2px solid transparent" }}
-                                      onMouseEnter={function(e) { if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
-                                      onMouseLeave={function(e) { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
-                                      <span style={{ fontSize: 13 }}>{s.icon}</span>
-                                      <span style={{ fontSize: 12, color: isActive ? s.color : "rgba(255,255,255,0.65)", fontWeight: isActive ? 700 : 400 }}>{s.label}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : null}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: pct === 100 ? "#34D399" : tarColor }}>{pct}%</div>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>{prog.done}/{prog.total} задач</div>
-                  </div>
-                  <button onClick={function(e) { e.stopPropagation(); removeClient(client.id); }}
-                    style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.25)", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✕</button>
-                </div>
-
-                {/* Mini-Gantt */}
-                <div style={{ padding: "0 18px 12px" }}>
-                  <div style={{ display: "flex", height: 8, gap: 2, borderRadius: 4, overflow: "hidden" }}>
-                    {GANTT_PHASES.map(function(ph) {
-                      var phProg = prog.byPhase[ph.key] || { done: 0, total: 0 };
-                      var phPct = phProg.total ? phProg.done / phProg.total : 0;
-                      var widthPct = (ph.dur / TOTAL_DAYS * 100).toFixed(1);
-                      return (
-                        <div key={ph.key} style={{ flex: widthPct, background: ph.color + "25", position: "relative", borderRadius: 2, overflow: "hidden", minWidth: 4 }}>
-                          <div style={{ position: "absolute", inset: 0, width: (phPct * 100) + "%", background: ph.color + "80" }} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 5, alignItems: "center" }}>
-                    {GANTT_PHASES.map(function(ph) {
-                      var phProg = prog.byPhase[ph.key] || { done: 0, total: 0 };
-                      return <span key={ph.key} style={{ fontSize: 9, color: ph.color + "99" }}>{ph.icon} {phProg.done}/{phProg.total}</span>;
-                    })}
-                    <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700,
-                      color: (function() {
-                        var days = daysSinceStart(client);
-                        var left = 180 - days;
-                        if (left <= 14) return "#F87171";
-                        if (left <= 30) return "#FBBF24";
-                        return "rgba(255,255,255,0.3)";
-                      })(),
-                      background: (function() {
-                        var left = 180 - daysSinceStart(client);
-                        if (left <= 14) return "rgba(248,113,113,0.1)";
-                        if (left <= 30) return "rgba(251,191,36,0.1)";
-                        return "rgba(255,255,255,0.05)";
-                      })(),
-                      border: "1px solid " + (function() {
-                        var left = 180 - daysSinceStart(client);
-                        if (left <= 14) return "rgba(248,113,113,0.3)";
-                        if (left <= 30) return "rgba(251,191,36,0.3)";
-                        return "rgba(255,255,255,0.08)";
-                      })(),
-                      padding: "2px 7px", borderRadius: 6
-                    }}>
-                      День {daysSinceStart(client)}
-                      {(180 - daysSinceStart(client)) <= 30 && (180 - daysSinceStart(client)) > 0
-                        ? " · осталось " + (180 - daysSinceStart(client)) + " д."
-                        : (180 - daysSinceStart(client)) <= 0 ? " · программа завершена" : ""}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── РОЛИ И ПОЛЬЗОВАТЕЛИ ──────────────────────────────────────────────────────
-
-const ROLE_CONFIG = {
-  admin:     { label: "Админ",      color: "#F472B6", icon: "👑", desc: "Полный доступ ко всем разделам" },
-  curator:   { label: "Куратор",    color: "#A78BFA", icon: "🎓", desc: "Полный доступ к базе знаний и клиентам" },
-  assistant: { label: "Ассистент",  color: "#34D399", icon: "⚡", desc: "Карточки своих клиентов и задачи по подачам" },
-  mentor:    { label: "Ментор",     color: "#F472B6", icon: "🧠", desc: "Страт-сессии, LinkedIn, моки, TL;DV" },
-  sales:     { label: "Sales",      color: "#FBBF24", icon: "💼", desc: "Воронка продаж и офферы клиентов" },
-  marketing: { label: "Маркетинг", color: "#67E8F9", icon: "📣", desc: "Офферы и кейсы для контента" },
-};
-
-const STAFF = [
-  // Админ — доступ ко всем разделам
-  { email: "irina-romashkina@go-offer.us",    name: "Ирина Ромашкина",    role: "admin" },
-
-  // Кураторы
-  { email: "kseniya-belyntseva@go-offer.us",  name: "Ксения Белынцева",   role: "curator" },
-  { email: "aleksandra-sheider@go-offer.us",  name: "Александра Шейдер",  role: "curator" },
-  { email: "kira@go-offer.us",                name: "Кира",               role: "curator" },
-  { email: "katya@go-offer.us",               name: "Катя",               role: "curator" },
-
-  // Менторы
-  { email: "anna-gordeeva@go-offer.us",       name: "Анна Гордеева",      role: "mentor" },
-  { email: "kirill-gugaev@go-offer.us",       name: "Кирилл Гугаев",      role: "mentor" },
-  { email: "luba-zabavskaya@go-offer.us",     name: "Люба Забавская",     role: "mentor" },
-
-  // Ассистенты — добавляй по мере необходимости
-  { email: "assistant1@go-offer.us",          name: "Ассистент 1",        role: "assistant" },
-  { email: "assistant2@go-offer.us",          name: "Ассистент 2",        role: "assistant" },
-
-  // Sales
-  { email: "sales@go-offer.us",              name: "Sales Team",          role: "sales" },
-
-  // Маркетинг
-  { email: "marketing@go-offer.us",          name: "Marketing Team",      role: "marketing" },
-];
-
-function LoginScreen({ onLogin }) {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  function handleLogin() {
-    var e = email.trim().toLowerCase();
-    if (!e) { setError("Введи корпоративную почту"); return; }
-    if (!e.endsWith("@go-offer.us")) {
-      setError("Доступ только для сотрудников Go Offer (@go-offer.us)");
-      return;
-    }
-    var staff = STAFF.find(function(s) { return s.email === e; });
-    if (!staff) {
-      setError("Сотрудник не найден. Обратись в общий чат.");
-      return;
-    }
-    setLoading(true);
-    setTimeout(function() {
-      onLogin({ email: e, name: staff.name, role: staff.role });
-      setLoading(false);
-    }, 600);
+  function toggleSort(col) {
+    if (sortCol === col) setSortDir(function(d) { return d === "asc" ? "desc" : "asc"; });
+    else { setSortCol(col); setSortDir("asc"); }
   }
 
-  function onKey(e) { if (e.key === "Enter") handleLogin(); }
-
-  return (
-    <div style={{ display: "flex", height: "100vh", background: "#080516", fontFamily: "Inter,-apple-system,sans-serif", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-      <style dangerouslySetInnerHTML={{__html: "* { box-sizing: border-box; margin: 0; padding: 0; } input { font-family: inherit; } button { font-family: inherit; cursor: pointer; } @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }"}} />
-      <div style={{ position: "fixed", top: -200, left: -200, width: 600, height: 600, background: "radial-gradient(circle,rgba(167,139,250,0.12),transparent 70%)", pointerEvents: "none" }} />
-      <div style={{ position: "fixed", bottom: -200, right: -100, width: 500, height: 500, background: "radial-gradient(circle,rgba(244,114,182,0.08),transparent 70%)", pointerEvents: "none" }} />
-      {[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].map(function(i) {
-        return <div key={i} style={{ position: "fixed", left: ((i*47+11)%100)+"%", top: ((i*61+9)%100)+"%", width: (i%3)+1, height: (i%3)+1, background: i%4===0?"#A78BFA":"#fff", borderRadius:"50%", opacity:0.08+(i%4)*0.04, pointerEvents:"none" }} />;
-      })}
-
-      <div style={{ width: 420, position: "relative", zIndex: 1, padding: "0 16px" }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ width: 56, height: 56, background: "linear-gradient(135deg,#A78BFA,#F472B6)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px", boxShadow: "none", animation: "float 3s ease-in-out infinite" }}>🍍</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>Go Offer</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>Внутренняя платформа</div>
-        </div>
-
-        <div style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: "32px 28px" }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Вход в систему</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 24, lineHeight: 1.5 }}>Доступ только для сотрудников с почтой @go-offer.us</div>
-
-          {/* Role hints — информационные бейджи */}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
-            {Object.entries(ROLE_CONFIG).map(function([key, r]) {
-              return (
-                <div key={key} style={{ fontSize: 10, color: r.color, background: r.color + "15", border: "1px solid " + r.color + "30", padding: "3px 10px", borderRadius: 20, fontWeight: 600 }}>
-                  {r.icon} {r.label}
-                </div>
-              );
-            })}
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>Корпоративная почта</div>
-            <input
-              value={email}
-              onChange={function(e) { setEmail(e.target.value); setError(""); }}
-              onKeyDown={onKey}
-              placeholder="name@go-offer.us"
-              type="email"
-              style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid " + (error ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.1)"), borderRadius: 10, padding: "12px 14px", fontSize: 14, color: "#fff", outline: "none" }}
-            />
-            {error ? <div style={{ fontSize: 12, color: "#F87171", marginTop: 7 }}>⚠️ {error}</div> : null}
-          </div>
-
-          <button onClick={handleLogin} disabled={loading}
-            style={{ width: "100%", padding: "13px", background: loading ? "rgba(167,139,250,0.4)" : "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 11, fontSize: 14, fontWeight: 700, color: "#fff", cursor: loading ? "default" : "pointer", boxShadow: "none", transition: "all 0.15s" }}>
-            {loading ? "Входим..." : "Войти →"}
-          </button>
-        </div>
-
-        <div style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "rgba(255,255,255,0.2)" }}>
-          Проблемы со входом? Напиши в общий чат Go Offer
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── КАБИНЕТ АССИСТЕНТА ───────────────────────────────────────────────────────
-
-function AssistantView({ currentUser }) {
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null);
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", tariff: "take-all", startDate: new Date().toISOString().slice(0,10), resumeUrl: "", workEmail: "", workPassword: "", totalApps: 0, doneApps: 0, notes: "" });
-
-  useEffect(function() {
-    sbLoadClients().then(function(data) {
-      if (data) {
-        var mine = data.clients.filter(function(c) { return c.assistant === currentUser.name || c.assistant === currentUser.email; });
-        setClients(mine);
-      }
-      setLoading(false);
-    }).catch(function() { setLoading(false); });
-  }, []);
-
-  var roleColor = ROLE_CONFIG.assistant.color;
+  function SortIcon({ col }) {
+    if (sortCol !== col) return <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 10 }}>↕</span>;
+    return <span style={{ color: "#A78BFA", fontSize: 10 }}>{sortDir === "asc" ? "↑" : "↓"}</span>;
+  }
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, gap: 12 }}>
-      <div style={{ width: 20, height: 20, border: "2px solid rgba(52,211,153,0.3)", borderTop: "2px solid #34D399", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 20, height: 20, border: "2px solid rgba(167,139,250,0.3)", borderTop: "2px solid #A78BFA", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Загружаем клиентов...</span>
     </div>
   );
 
+  // ── Детальная карточка (Гант) ──
   if (selected) {
-    var tariffApps = { "take-all": 300, "take-all-plus": 2500, "vip": 5000 };
-    var totalApps = selected.totalApps || tariffApps[selected.tariff] || 300;
-    var doneApps = selected.doneApps || 0;
-    var leftApps = Math.max(0, totalApps - doneApps);
-    var appPct = Math.min(100, Math.round(doneApps / totalApps * 100));
-    var isLow = leftApps < 50;
+    var cl = TARIFF_CHECKLISTS[selected.tariff] || {};
+    var tarColor = "#A78BFA";
+    var prog = { done: 0, total: 0, byPhase: {} };
+    GANTT_PHASES.forEach(function(ph) {
+      var items = cl[ph.key] || [];
+      var done = items.filter(function(it) { return checkedMap[selected.id + "_" + it.id]; }).length;
+      prog.byPhase[ph.key] = { done: done, total: items.length };
+      prog.done += done; prog.total += items.length;
+    });
+    var pct = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
+    var elapsed = Math.min(daysSinceStart(selected), TOTAL_DAYS);
 
     return (
-      <div style={{ maxWidth: 700, margin: "0 auto" }}>
-        <button onClick={function() { setSelected(null); }} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, marginBottom: 20, padding: "5px 0" }}>
-          ← Назад к списку
-        </button>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "linear-gradient(135deg," + roleColor + ",#22c55e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 18 }}>{selected.name.charAt(0)}</div>
-          <div>
-            <div style={{ fontSize: 19, fontWeight: 800, color: "#fff" }}>{selected.name}</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{selected.tariff?.toUpperCase()} · Старт: {selected.startDate}</div>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+          <button onClick={function() { setSelected(null); setActivePhase(null); }}
+            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13 }}>← Назад</button>
+          <span style={{ color: "rgba(255,255,255,0.15)" }}>|</span>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>{selected.name}</div>
+          {selected.title && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 20 }}>{selected.title}</span>}
+          {selected.location && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>📍 {selected.location}</span>}
+          {selected.linkedinUrl && <a href={selected.linkedinUrl} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#67E8F9" }}>LinkedIn →</a>}
+          <select value={selected.mentor || ""} onChange={function(e) {
+            var newMentor = e.target.value;
+            setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? Object.assign({}, c, { mentor: newMentor }) : c; }); });
+            setSelected(function(s) { return Object.assign({}, s, { mentor: newMentor }); });
+            sbSaveClient(Object.assign({}, selected, { mentor: newMentor }), checkedMap, commentsMap);
+          }} style={{ fontSize: 11, background: "#1a1535", border: "1px solid rgba(244,114,182,0.3)", borderRadius: 8, padding: "3px 10px", color: selected.mentor ? "#F472B6" : "rgba(255,255,255,0.3)", outline: "none", fontFamily: "inherit", cursor: "pointer" }}>
+            <option value="">🧠 Ментор</option>
+            {STAFF.filter(function(s) { return s.role === "mentor"; }).map(function(s) { return <option key={s.email} value={s.name}>{s.name}</option>; })}
+          </select>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "4px 10px" }}>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>📅</span>
+            <input type="date" value={selected.startDate} onChange={function(e) {
+              var d = e.target.value;
+              setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? Object.assign({}, c, { startDate: d }) : c; }); });
+              setSelected(function(s) { return Object.assign({}, s, { startDate: d }); });
+            }} style={{ background: "transparent", border: "none", color: "#fff", fontSize: 12, fontWeight: 600, outline: "none", cursor: "pointer", fontFamily: "inherit" }} />
           </div>
         </div>
 
-        {/* Подачи */}
-        <div style={{ background: isLow ? "rgba(248,113,113,0.07)" : "rgba(52,211,153,0.06)", border: "1px solid " + (isLow ? "rgba(248,113,113,0.25)" : "rgba(52,211,153,0.2)"), borderRadius: 14, padding: "18px 20px", marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>📊 Подачи</div>
-            {isLow && <div style={{ fontSize: 11, color: "#F87171", fontWeight: 700, background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 20, padding: "2px 10px" }}>⚠️ Осталось мало!</div>}
+        {/* Прогресс */}
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 20px", marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Прогресс чеклиста: <span style={{ color: tarColor, fontWeight: 700 }}>{prog.done}/{prog.total}</span></span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: pct === 100 ? "#34D399" : tarColor }}>{pct}%</span>
           </div>
-          <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 28, fontWeight: 900, color: roleColor }}>{doneApps}</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>сделано</div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 28, fontWeight: 900, color: isLow ? "#F87171" : "#fff" }}>{leftApps}</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>осталось</div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 28, fontWeight: 900, color: "rgba(255,255,255,0.3)" }}>{totalApps}</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>всего по тарифу</div>
-            </div>
+          <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99 }}>
+            <div style={{ height: "100%", width: pct + "%", background: tarColor, borderRadius: 99, transition: "width 0.4s" }} />
           </div>
-          <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
-            <div style={{ height: "100%", width: appPct + "%", background: isLow ? "linear-gradient(90deg,#F87171,#ef4444)" : "linear-gradient(90deg," + roleColor + ",#22c55e)", borderRadius: 99, transition: "width 0.4s" }} />
-          </div>
-          <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-            <button onClick={function() {
-              var n = parseInt(prompt("Сколько подач сделано сегодня?") || "0");
-              if (!n || isNaN(n)) return;
-              var updated = Object.assign({}, selected, { doneApps: doneApps + n });
-              setSelected(updated);
-              setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? updated : c; }); });
-              sbSaveClient(updated, {}, {});
-            }} style={{ fontSize: 12, fontWeight: 700, color: roleColor, background: roleColor + "15", border: "1px solid " + roleColor + "40", borderRadius: 8, padding: "6px 14px", cursor: "pointer" }}>
-              + Добавить подачи
-            </button>
-            <button onClick={function() {
-              var n = parseInt(prompt("Введи общее количество сделанных подач:") || "0");
-              if (isNaN(n)) return;
-              var updated = Object.assign({}, selected, { doneApps: n });
-              setSelected(updated);
-              setClients(function(p) { return p.map(function(c) { return c.id === selected.id ? updated : c; }); });
-              sbSaveClient(updated, {}, {});
-            }} style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "6px 14px", cursor: "pointer" }}>
-              Задать вручную
-            </button>
+          <div style={{ marginTop: 12 }}>
+            {(function() {
+              var days = daysSinceStart(selected);
+              var left = 180 - days;
+              var pct180 = Math.min(100, Math.round(days/180*100));
+              var c = left <= 14 ? "#F87171" : left <= 30 ? "#FBBF24" : "#34D399";
+              return (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>📅 Программа (180 дней)</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: c }}>День {days} · осталось {Math.max(0,left)} дн.</span>
+                  </div>
+                  <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                    <div style={{ height: "100%", width: pct180+"%", background: c, borderRadius: 99 }} />
+                  </div>
+                  {left <= 30 && left > 0 && <div style={{ marginTop: 6, fontSize: 12, color: c, background: c+"10", border: "1px solid "+c+"30", borderRadius: 7, padding: "5px 10px" }}>{left <= 14 ? "🔴 Критично — меньше 2 недель!" : "⚠️ Меньше месяца до конца программы"}</div>}
+                </div>
+              );
+            })()}
           </div>
         </div>
 
-        {/* Рабочая почта */}
-        <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 20px", marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 12 }}>📧 Рабочая почта для подач</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 4 }}>Email</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "9px 12px" }}>
-                <span style={{ fontSize: 13, color: "#fff", flex: 1, wordBreak: "break-all" }}>{selected.workEmail || "—"}</span>
-                {selected.workEmail && <button onClick={function() { navigator.clipboard.writeText(selected.workEmail); }} style={{ fontSize: 10, color: roleColor, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>📋</button>}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 4 }}>Пароль</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "9px 12px" }}>
-                <span style={{ fontSize: 13, color: "#fff", flex: 1, letterSpacing: "2px" }}>{selected.workPassword ? "••••••••" : "—"}</span>
-                {selected.workPassword && <button onClick={function() { navigator.clipboard.writeText(selected.workPassword); }} style={{ fontSize: 10, color: roleColor, background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>📋</button>}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Резюме */}
-        <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 20px", marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 10 }}>📄 Резюме</div>
-          {selected.resumeUrl ? (
-            <a href={selected.resumeUrl} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13, color: roleColor, textDecoration: "none", background: roleColor + "10", border: "1px solid " + roleColor + "30", borderRadius: 8, padding: "8px 14px", fontWeight: 600 }}>
-              📎 Открыть резюме в Google Doc →
-            </a>
-          ) : (
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>Резюме не прикреплено</div>
-          )}
-        </div>
-
-        {/* Заметки */}
-        {selected.notes && (
-          <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 20px" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 8 }}>📝 Заметки куратора</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{selected.notes}</div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ maxWidth: 800, margin: "0 auto" }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>⚡ Мои клиенты</h1>
-        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Карточки клиентов с задачами по подачам</p>
-      </div>
-
-      {clients.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
-          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Клиенты не назначены</div>
-          <div style={{ fontSize: 13 }}>Куратор назначит тебя на клиентов — они появятся здесь</div>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {clients.map(function(client) {
-            var tariffApps = { "take-all": 300, "take-all-plus": 2500, "vip": 5000 };
-            var total = client.totalApps || tariffApps[client.tariff] || 300;
-            var done = client.doneApps || 0;
-            var left = Math.max(0, total - done);
-            var pct = Math.min(100, Math.round(done / total * 100));
-            var isLow = left < 50;
-
+        {/* Статус воронки */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 4 }}>
+          {funnelStages.map(function(st) {
+            var isActive = selected.status === st.id;
             return (
-              <div key={client.id} onClick={function() { setSelected(client); }}
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid " + (isLow ? "rgba(248,113,113,0.3)" : "rgba(52,211,153,0.15)"), borderRadius: 14, padding: "16px 18px", cursor: "pointer", transition: "all 0.15s" }}
-                onMouseEnter={function(e) { e.currentTarget.style.borderColor = isLow ? "rgba(248,113,113,0.5)" : "rgba(52,211,153,0.4)"; }}
-                onMouseLeave={function(e) { e.currentTarget.style.borderColor = isLow ? "rgba(248,113,113,0.3)" : "rgba(52,211,153,0.15)"; }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg," + roleColor + ",#22c55e)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{client.name.charAt(0)}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{client.name}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{client.tariff?.toUpperCase()} · {client.workEmail || "email не указан"}</div>
+              <button key={st.id} onClick={function() { updateStatus(selected.id, st.id); }}
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 20, border: isActive ? "1px solid "+st.color+"60" : "1px solid rgba(255,255,255,0.08)", background: isActive ? st.color+"18" : "rgba(255,255,255,0.03)", color: isActive ? st.color : "rgba(255,255,255,0.35)", fontSize: 12, fontWeight: isActive ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+                {st.icon} {st.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Материалы ментора */}
+        {(function() {
+          var mentorData = { tldv: {}, notes: {} };
+          STAFF.filter(function(s) { return s.role === "mentor"; }).forEach(function(s) {
+            try { var d = localStorage.getItem("mentor_v2_" + s.email); if (d) { var p = JSON.parse(d); Object.assign(mentorData.tldv, p.tldv||{}); Object.assign(mentorData.notes, p.notes||{}); } } catch(e) {}
+          });
+          var note = mentorData.notes[selected.id] || "";
+          var tldvEntries = Object.keys(mentorData.tldv).filter(function(k) { return k.startsWith(selected.id+"_"); }).map(function(k) { return { key: k, entry: mentorData.tldv[k] }; });
+          if (!note && !tldvEntries.length) return null;
+          return (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 10 }}>🧠 Материалы ментора</div>
+              <div style={{ display: "grid", gridTemplateColumns: tldvEntries.length ? "1fr 1fr" : "1fr", gap: 10 }}>
+                {tldvEntries.length > 0 && (
+                  <div style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#FBBF24", marginBottom: 8 }}>🎬 TL;DV ({tldvEntries.length})</div>
+                    {tldvEntries.map(function(item) { return (
+                      <div key={item.key} style={{ marginBottom: 6 }}>
+                        <a href={item.entry.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#FBBF24", textDecoration: "none" }}>
+                          {item.key.includes("_strategy_") ? "🎯" : "🎤"} {item.entry.url.slice(0,40)}...
+                        </a>
+                        {item.entry.note && <div style={{ fontSize: 11, color: "#34D399", marginTop: 3 }}>✨ {item.entry.note}</div>}
+                      </div>
+                    ); })}
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: isLow ? "#F87171" : roleColor }}>{left}</div>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>осталось подач</div>
+                )}
+                {note && (
+                  <div style={{ background: "rgba(244,114,182,0.05)", border: "1px solid rgba(244,114,182,0.2)", borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#F472B6", marginBottom: 8 }}>📝 Заметки</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{note}</div>
                   </div>
-                  {isLow && <div style={{ fontSize: 11, color: "#F87171", fontWeight: 700 }}>⚠️</div>}
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Гант */}
+        <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "18px 20px", overflow: "hidden" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>🗓 Диаграмма Ганта</div>
+            {activePhase && <button onClick={function() { setActivePhase(null); }} style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer" }}>✕ Закрыть</button>}
+          </div>
+          {GANTT_PHASES.map(function(ph) {
+            var phItems = cl[ph.key] || [];
+            var phProg = prog.byPhase[ph.key] || { done: 0, total: 0 };
+            var phPct = phProg.total ? Math.round(phProg.done/phProg.total*100) : 0;
+            var isActive = activePhase === ph.key;
+            return (
+              <div key={ph.key} style={{ marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={function() { setActivePhase(isActive ? null : ph.key); }}>
+                  <div style={{ width: 110, fontSize: 12, color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                    <span>{ph.icon}</span><span>{ph.label}</span>
+                  </div>
+                  <div style={{ flex: 1, height: 22, background: "rgba(255,255,255,0.05)", borderRadius: 4, position: "relative", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", left: (ph.start/TOTAL_DAYS*100)+"%", width: (ph.dur/TOTAL_DAYS*100)+"%", height: "100%", background: ph.color+"33", borderRadius: 4 }} />
+                    <div style={{ position: "absolute", left: (ph.start/TOTAL_DAYS*100)+"%", width: (ph.dur/TOTAL_DAYS*100*phPct/100)+"%", height: "100%", background: ph.color, borderRadius: 4, transition: "width 0.3s" }} />
+                    <div style={{ position: "absolute", left: (ph.start/TOTAL_DAYS*100)+"%", top: 3, fontSize: 11, color: "#fff", fontWeight: 600, paddingLeft: 5 }}>{phProg.done}/{phProg.total} {phPct===100?"✓":""}</div>
+                  </div>
                 </div>
-                <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
-                  <div style={{ height: "100%", width: pct + "%", background: isLow ? "#F87171" : roleColor, borderRadius: 99 }} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{done} из {total} подач</span>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{pct}%</span>
-                </div>
+                {isActive && phItems.length > 0 && (
+                  <div style={{ marginTop: 6, marginLeft: 120, background: "rgba(255,255,255,0.025)", border: "1px solid "+ph.color+"33", borderRadius: 10, overflow: "hidden" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: ph.color }}>{ph.icon} {ph.label}</div>
+                      <button onClick={function(e) { e.stopPropagation();
+                        var allDone = phItems.every(function(it) { return checkedMap[selected.id+"_"+it.id]; });
+                        setCheckedMap(function(p) { var n=Object.assign({},p); phItems.forEach(function(it){ n[selected.id+"_"+it.id]=!allDone; }); sbSaveClient(selected,n,commentsMap); return n; });
+                      }} style={{ fontSize: 11, color: ph.color, background: ph.color+"15", border: "1px solid "+ph.color+"40", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>
+                        {phItems.every(function(it){return checkedMap[selected.id+"_"+it.id];}) ? "Снять все" : "Отметить все ✓"}
+                      </button>
+                    </div>
+                    {phItems.map(function(item) {
+                      var key = selected.id+"_"+item.id;
+                      var done = !!checkedMap[key];
+                      return (
+                        <div key={item.id} onClick={function(e) { e.stopPropagation();
+                          setCheckedMap(function(p) { var n=Object.assign({},p); n[key]=!done; sbSaveClient(selected,n,commentsMap); return n; });
+                        }} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.03)", cursor: "pointer", background: done ? ph.color+"08" : "transparent" }}>
+                          <div style={{ width: 18, height: 18, borderRadius: 5, border: "1.5px solid "+(done?ph.color:"rgba(255,255,255,0.15)"), background: done?ph.color+"22":"transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                            {done && <span style={{ color: ph.color, fontSize: 10, fontWeight: 700 }}>✓</span>}
+                          </div>
+                          <span style={{ fontSize: 12, color: done?"rgba(255,255,255,0.35)":"rgba(255,255,255,0.7)", textDecoration: done?"line-through":"none", lineHeight: 1.5 }}>{item.text}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
-      )}
-    </div>
-  );
-}
-
-// ── ЗАГЛУШКИ ДЛЯ ОСТАЛЬНЫХ РОЛЕЙ ──────────────────────────────────────────────
-
-// ── ЧЕКЛИСТЫ ДЛЯ МЕНТОРА ──────────────────────────────────────────────────────
-// Кол-во сессий по тарифу
-const TARIFF_SESSIONS = {
-  "take-all":      { strategy: 1, mock: 2 },
-  "take-all-plus": { strategy: 3, mock: 4 },
-  "vip":           { strategy: 6, mock: 6 },
-  "default":       { strategy: 1, mock: 2 },
-};
-
-// Чеклист одной страт-сессии
-const SESSION_CHECKLIST = [
-  { id: "sc1", text: "Провести знакомство и собрать бэкграунд клиента" },
-  { id: "sc2", text: "Разобрать опыт и выявить сильные стороны" },
-  { id: "sc3", text: "Определить целевые позиции и компании" },
-  { id: "sc4", text: "Обсудить локацию и формат (remote/hybrid/onsite)" },
-  { id: "sc5", text: "Договориться о зарплатных ожиданиях" },
-  { id: "sc6", text: "Объяснить структуру программы и следующие шаги" },
-  { id: "sc7", text: "Передать задание на резюме-анкету" },
-  { id: "sc8", text: "Заполнить заметки для передачи куратору" },
-];
-
-// Чеклист одного мока
-const MOCK_CHECKLIST = [
-  { id: "mc1", text: "Self-pitch: Start → Salary → Experience → Visa" },
-  { id: "mc2", text: "Tell me about yourself" },
-  { id: "mc3", text: "Почему эта компания / роль?" },
-  { id: "mc4", text: "STAR-кейс: сложный проект" },
-  { id: "mc5", text: "STAR-кейс: конфликт в команде" },
-  { id: "mc6", text: "STAR-кейс: провал / чему научился" },
-  { id: "mc7", text: "Strengths and weaknesses" },
-  { id: "mc8", text: "Salary expectations" },
-  { id: "mc9", text: "Вопросы клиента к интервьюеру" },
-  { id: "mc10", text: "Оценить уверенность, темп речи, eye contact" },
-  { id: "mc11", text: "Дать письменный фидбэк по итогам" },
-];
-
-const MENTOR_CHECKLISTS = {
-  linkedin: {
-    label: "LinkedIn", icon: "🔗", color: "#34D399",
-    items: [
-      { id: "l1", text: "Проверить фото профиля (профессиональное, высокое качество)" },
-      { id: "l2", text: "Написать headline — конкретный тайтл + ключевые навыки" },
-      { id: "l3", text: "Заполнить About (150-300 слов, от первого лица)" },
-      { id: "l4", text: "Синхронизировать опыт с резюме (даты, тайтлы, компании)" },
-      { id: "l5", text: "Добавить описание компаний (Яндекс, TikTok и т.д.)" },
-      { id: "l6", text: "Заполнить Skills (минимум 10, релевантных тайтлу)" },
-      { id: "l7", text: "Добавить сертификаты и курсы" },
-      { id: "l8", text: "Включить Open to Work (только для рекрутеров)" },
-      { id: "l9", text: "Кастомизировать URL профиля" },
-      { id: "l10", text: "Проверить язык профиля — английский основной" },
-      { id: "l11", text: "Скачать PDF и проверить отображение" },
-    ]
-  },
-  checkin: {
-    label: "Чекап", icon: "✅", color: "#67E8F9",
-    items: [
-      { id: "c1", text: "Проверить статистику подач за период" },
-      { id: "c2", text: "Разобрать отклики / молчание" },
-      { id: "c3", text: "Обсудить фидбэк с реальных интервью" },
-      { id: "c4", text: "Скорректировать стратегию поиска если нужно" },
-      { id: "c5", text: "Проверить эмоциональное состояние клиента" },
-      { id: "c6", text: "Поставить цели на следующий период" },
-    ]
-  },
-};
-
-function SlotCard({ slotType, slotIndex, slotNum, clientId, checks, onToggle, tldv, onSaveTldv, onDeleteTldv, isLocked, isCurator }) {
-  var isStrategy = slotType === "strategy";
-  var checklist = isStrategy ? SESSION_CHECKLIST : MOCK_CHECKLIST;
-  var color = isStrategy ? "#A78BFA" : "#FBBF24";
-  var icon = isStrategy ? "🎯" : "🎤";
-  var label = isStrategy ? "Страт-сессия" : "Мок-интервью";
-  const [expanded, setExpanded] = useState(false);
-  const [showTldvForm, setShowTldvForm] = useState(false);
-  const [form, setForm] = useState({ url: "", desc: "", note: "" });
-
-  var doneCount = checklist.filter(function(it) {
-    return checks[clientId + "_" + slotType + slotIndex + "_" + it.id];
-  }).length;
-  var allDone = doneCount === checklist.length;
-  var isOpen = !isLocked && (slotIndex === 0 || expanded !== false);
-
-  function handleAddTldv() {
-    if (!form.url.trim()) return;
-    onSaveTldv({ id: Date.now(), url: form.url.trim(), desc: form.desc.trim(), note: form.note.trim(), date: new Date().toLocaleDateString("ru-RU") });
-    setForm({ url: "", desc: "", note: "" });
-    setShowTldvForm(false);
-  }
-
-  if (isLocked) {
-    return (
-      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12, padding: "14px 16px", opacity: 0.4 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🔒</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>{icon} {label} #{slotNum}</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>Откроется после завершения предыдущей</div>
-        </div>
       </div>
     );
   }
 
+  // ── Главный вид: воронка + таблица ──
+  var activeClients = clients.filter(function(c) { return !c.archived; });
+  var archivedClients = clients.filter(function(c) { return c.archived; });
+
   return (
-    <div style={{ background: allDone ? color + "08" : "rgba(255,255,255,0.025)", border: "1px solid " + (allDone ? color + "40" : "rgba(255,255,255,0.08)"), borderRadius: 12, overflow: "hidden" }}>
-      {/* Заголовок слота */}
-      <div onClick={function() { setExpanded(function(p) { return !p; }); }}
-        style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", cursor: "pointer" }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: allDone ? color + "20" : "rgba(255,255,255,0.06)", border: "1px solid " + (allDone ? color + "40" : "rgba(255,255,255,0.1)"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>{allDone ? "✅" : icon}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: allDone ? color : "#fff" }}>{label} #{slotNum} {tldv && tldv.url ? "· 🎬" : ""}</div>
-          {tldv && tldv.date && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>{tldv.date}</div>}
+    <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+
+      {/* Заголовок */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>Клиенты</h1>
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 2 }}>
+            {showArchived ? archivedClients.length + " архивных" : activeClients.length + " активных"} · всего {clients.length}
+          </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ fontSize: 11, color: allDone ? color : "rgba(255,255,255,0.3)", fontWeight: 600 }}>{doneCount}/{checklist.length}</div>
-          <div style={{ width: 50, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
-            <div style={{ height: "100%", width: (doneCount/checklist.length*100) + "%", background: color, borderRadius: 99 }} />
-          </div>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{expanded ? "▲" : "▼"}</span>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={function() { setShowArchived(function(p){return !p;}); }}
+            style={{ fontSize: 12, color: showArchived ? "#A78BFA" : "rgba(255,255,255,0.4)", background: showArchived ? "rgba(167,139,250,0.1)" : "rgba(255,255,255,0.04)", border: "1px solid "+(showArchived?"rgba(167,139,250,0.3)":"rgba(255,255,255,0.08)"), borderRadius: 9, padding: "7px 14px", cursor: "pointer" }}>
+            {showArchived ? "👁 Показать активных" : "📦 Архив (" + archivedClients.length + ")"}
+          </button>
+          {canEdit && (
+            <button onClick={function() { setShowAdd(function(p){return !p;}); }}
+              style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer" }}>
+              + Добавить клиента
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Содержимое слота */}
-      {expanded && (
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          {/* TL;DV */}
-          <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-            {tldv && tldv.url ? (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <a href={tldv.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#FBBF24", textDecoration: "none", fontWeight: 600 }}>
-                    🎬 {tldv.url.length > 55 ? tldv.url.slice(0, 55) + "..." : tldv.url}
-                  </a>
-                  {tldv.desc && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 4 }}>📝 {tldv.desc}</div>}
-                  {tldv.note && <div style={{ fontSize: 11, color: "#34D399", background: "rgba(52,211,153,0.08)", borderRadius: 6, padding: "4px 8px", marginTop: 5 }}>✨ {tldv.note}</div>}
-                </div>
-                <button onClick={function() { onDeleteTldv(); }} style={{ color: "#F87171", background: "none", border: "none", cursor: "pointer", fontSize: 12, flexShrink: 0 }}>✕</button>
-              </div>
-            ) : (
-              showTldvForm ? (
-                <div>
-                  {[{ label: "Ссылка TL;DV *", key: "url", ph: "https://tldv.io/..." }, { label: "Описание сессии", key: "desc", ph: "Страт-сессия №1..." }, { label: "Заметка для резюме", key: "note", ph: "Ключевые инсайты..." }].map(function(f) {
-                    return (
-                      <div key={f.key} style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginBottom: 3 }}>{f.label}</div>
-                        <input value={form[f.key]} onChange={function(e) { var v = e.target.value; setForm(function(p) { var n = Object.assign({}, p); n[f.key] = v; return n; }); }}
-                          placeholder={f.ph} style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "7px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "inherit" }} />
-                      </div>
-                    );
-                  })}
-                  <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                    <button onClick={handleAddTldv} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#FBBF24", border: "none", borderRadius: 7, padding: "6px 14px", cursor: "pointer" }}>Сохранить</button>
-                    <button onClick={function() { setShowTldvForm(false); }} style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.05)", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Отмена</button>
-                  </div>
-                </div>
-              ) : (
-                <button onClick={function() { setShowTldvForm(true); }} style={{ fontSize: 11, color: "#FBBF24", background: "rgba(251,191,36,0.08)", border: "1px dashed rgba(251,191,36,0.3)", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>
-                  🎬 Прикрепить TL;DV запись
-                </button>
-              )
-            )}
-          </div>
-
-          {/* Чеклист */}
-          <div>
-            <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 16px 4px" }}>
-              <button onClick={function() {
-                checklist.forEach(function(it) { onToggle(slotType + slotIndex + "_" + it.id, !allDone); });
-              }} style={{ fontSize: 10, color: color, background: "none", border: "none", cursor: "pointer" }}>
-                {allDone ? "Снять все" : "Отметить все ✓"}
-              </button>
-            </div>
-            {checklist.map(function(item, i) {
-              var key = clientId + "_" + slotType + slotIndex + "_" + item.id;
-              var done = !!checks[key];
+      {/* Воронка */}
+      {!showArchived && (
+        <div style={{ position: "sticky", top: 0, zIndex: 10, marginBottom: 16, background: "rgba(8,5,22,0.92)", backdropFilter: "blur(12px)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", padding: "12px 16px", overflowX: "auto" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 10 }}>Воронка</div>
+          <div style={{ display: "flex", gap: 6, alignItems: "stretch", minWidth: "max-content" }}>
+            {funnelStages.map(function(st, i) {
+              var count = activeClients.filter(function(c) { return c.status === st.id; }).length;
+              var isActive = filterStatus === st.id;
               return (
-                <div key={item.id} onClick={function() { onToggle(slotType + slotIndex + "_" + item.id, !done); }}
-                  style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 16px", borderTop: "1px solid rgba(255,255,255,0.03)", cursor: "pointer", background: done ? color + "06" : "transparent" }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 5, border: "1.5px solid " + (done ? color : "rgba(255,255,255,0.12)"), background: done ? color : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                    {done && <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>✓</span>}
+                <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <div onClick={function() { setFilterStatus(isActive ? "Все" : st.id); }}
+                    style={{ textAlign: "center", padding: "8px 10px", borderRadius: 10, background: isActive ? st.color+"20" : count > 0 ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)", border: "1px solid "+(isActive ? st.color+"50" : count > 0 ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)"), cursor: "pointer", minWidth: 70, transition: "all 0.15s" }}>
+                    <div style={{ fontSize: 18, marginBottom: 3 }}>{st.icon}</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: count > 0 ? st.color : "rgba(255,255,255,0.2)" }}>{count}</div>
+                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 2, lineHeight: 1.2 }}>{st.label}</div>
                   </div>
-                  <span style={{ fontSize: 12, color: done ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.7)", textDecoration: done ? "line-through" : "none", lineHeight: 1.5 }}>{item.text}</span>
+                  {i < funnelStages.length - 1 && <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 14 }}>›</span>}
                 </div>
               );
             })}
           </div>
         </div>
       )}
+
+      {/* Форма добавления */}
+      {showAdd && (
+        <div style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 14, padding: "18px 20px", marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#A78BFA", marginBottom: 14 }}>Новый клиент</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+            {[{l:"Имя *",k:"name",t:"text",ph:"Имя Фамилия"},{l:"Дата старта",k:"startDate",t:"date",ph:""},{l:"Статус",k:null}].map(function(f,i) {
+              if (!f.k) return (
+                <div key={i}>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>Статус</div>
+                  <select value={form.status} onChange={function(e){var v=e.target.value;setForm(function(p){return Object.assign({},p,{status:v});});}}
+                    style={{ width:"100%", background:"#1a1535", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"8px 11px", fontSize:13, color:"#fff", outline:"none", fontFamily:"inherit" }}>
+                    {STATUS_STAGES.map(function(s){return <option key={s.id} value={s.id}>{s.icon} {s.label}</option>;})}
+                  </select>
+                </div>
+              );
+              return (
+                <div key={f.k}>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>{f.l}</div>
+                  <input type={f.t} value={form[f.k]} placeholder={f.ph} onChange={function(e){var v=e.target.value;setForm(function(p){return Object.assign({},p,{[f.k]:v});});}}
+                    style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"8px 11px", fontSize:13, color:"#fff", outline:"none", fontFamily:"inherit" }} />
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>Куратор</div>
+              <select value={form.curator} onChange={function(e){var v=e.target.value;setForm(function(p){return Object.assign({},p,{curator:v});});}}
+                style={{ width:"100%", background:"#1a1535", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"8px 11px", fontSize:13, color:"#fff", outline:"none", fontFamily:"inherit" }}>
+                {CURATORS.map(function(c){return <option key={c} value={c}>{c}</option>;})}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>Тариф</div>
+              <select value={form.tariff} onChange={function(e){var v=e.target.value;setForm(function(p){return Object.assign({},p,{tariff:v});});}}
+                style={{ width:"100%", background:"#1a1535", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"8px 11px", fontSize:13, color:"#fff", outline:"none", fontFamily:"inherit" }}>
+                {Object.entries(TARIFF_LABELS).map(function(e){return <option key={e[0]} value={e[0]}>{e[1]}</option>;})}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 5 }}>Ментор</div>
+              <select value={form.mentor||""} onChange={function(e){var v=e.target.value;setForm(function(p){return Object.assign({},p,{mentor:v});});}}
+                style={{ width:"100%", background:"#1a1535", border:"1px solid rgba(244,114,182,0.25)", borderRadius:8, padding:"8px 11px", fontSize:13, color:"#fff", outline:"none", fontFamily:"inherit" }}>
+                <option value="">— Не назначен</option>
+                {STAFF.filter(function(s){return s.role==="mentor";}).map(function(s){return <option key={s.email} value={s.name}>{s.name}</option>;})}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={addClient} style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 9, padding: "9px 20px", cursor: "pointer" }}>Добавить</button>
+            <button onClick={function(){setShowAdd(false);}} style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 9, padding: "9px 16px", cursor: "pointer" }}>Отмена</button>
+          </div>
+        </div>
+      )}
+
+      {/* Фильтры */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 9, padding: "7px 11px", flex: 1, minWidth: 160 }}>
+          <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 12 }}>🔍</span>
+          <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Поиск по имени, должности..."
+            style={{ background: "none", border: "none", outline: "none", fontSize: 13, color: "#fff", width: "100%", fontFamily: "inherit" }} />
+        </div>
+        {[
+          {val: filterCurator, set: setFilterCurator, opts: ["Все"].concat(CURATORS), label: "куратор", pfx: "👤 "},
+          {val: filterMentor, set: setFilterMentor, opts: allMentors, label: "ментор", pfx: "🧠 "},
+          {val: filterStatus, set: setFilterStatus, opts: ["Все"].concat(STATUS_STAGES.map(function(s){return s.id;})), label: "статус", pfx: ""},
+          {val: filterTariff, set: setFilterTariff, opts: allTariffs, label: "тариф", pfx: ""},
+        ].map(function(f, i) {
+          return (
+            <select key={i} value={f.val} onChange={function(e){f.set(e.target.value);}}
+              style={{ background:"#1a1535", border:"1px solid rgba(255,255,255,0.1)", borderRadius:9, padding:"8px 12px", fontSize:13, color:"rgba(255,255,255,0.7)", outline:"none", fontFamily:"inherit", cursor:"pointer" }}>
+              <option value="Все">Все {f.label}ы</option>
+              {f.opts.filter(function(o){return o!=="Все";}).map(function(o) {
+                var st = STATUS_STAGES.find(function(s){return s.id===o;});
+                var label = st ? st.icon+" "+st.label : TARIFF_LABELS[o] || o;
+                return <option key={o} value={o}>{f.pfx}{label}</option>;
+              })}
+            </select>
+          );
+        })}
+        {(filterCurator!=="Все"||filterStatus!=="Все"||filterTariff!=="Все"||filterMentor!=="Все"||search!=="") && (
+          <button onClick={function(){setFilterCurator("Все");setFilterStatus("Все");setFilterTariff("Все");setFilterMentor("Все");setSearch("");}}
+            style={{ fontSize:12, color:"#F87171", background:"rgba(248,113,113,0.08)", border:"1px solid rgba(248,113,113,0.25)", borderRadius:9, padding:"8px 12px", cursor:"pointer" }}>
+            ✕ Сбросить
+          </button>
+        )}
+      </div>
+
+      {/* Таблица */}
+      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
+        {/* Шапка таблицы */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 1.2fr 0.8fr 0.7fr 0.7fr 80px", gap: 0, borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)" }}>
+          {[
+            {label:"Имя / Должность", col:"name"},
+            {label:"Тариф", col:"tariff"},
+            {label:"Куратор", col:"curator"},
+            {label:"Статус", col:"status"},
+            {label:"Ментор", col:"mentor"},
+            {label:"Неделя", col:"week"},
+            {label:"Дней", col:"days"},
+            {label:"", col:null},
+          ].map(function(h, i) {
+            return (
+              <div key={i} onClick={h.col ? function(){toggleSort(h.col);} : null}
+                style={{ padding: "10px 12px", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.6px", cursor: h.col ? "pointer" : "default", display: "flex", alignItems: "center", gap: 4, userSelect: "none" }}>
+                {h.label} {h.col && <SortIcon col={h.col} />}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Строки */}
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px", color: "rgba(255,255,255,0.25)", fontSize: 14 }}>
+            Клиентов не найдено
+          </div>
+        ) : (
+          filtered.map(function(client, idx) {
+            var st = STATUS_STAGES.find(function(s){return s.id===client.status;}) || STATUS_STAGES[0];
+            var days = daysSinceStart(client);
+            var daysLeft = 180 - days;
+            var daysColor = daysLeft <= 14 ? "#F87171" : daysLeft <= 30 ? "#FBBF24" : "rgba(255,255,255,0.4)";
+            var tarLabel = TARIFF_LABELS[client.tariff] || client.tariff || "";
+            // Сокращаем тариф для отображения
+            var tarShort = tarLabel.replace("Take All","TA").replace("Plus","+").replace("Mocks","M").replace("Old","Old").replace("Strategy","Strat");
+
+            return (
+              <div key={client.id}
+                style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 1.2fr 0.8fr 0.7fr 0.7fr 80px", gap: 0, borderBottom: idx < filtered.length-1 ? "1px solid rgba(255,255,255,0.04)" : "none", background: idx%2===0?"transparent":"rgba(255,255,255,0.01)", transition: "background 0.1s" }}
+                onMouseEnter={function(e){e.currentTarget.style.background="rgba(167,139,250,0.05)";}}
+                onMouseLeave={function(e){e.currentTarget.style.background=idx%2===0?"transparent":"rgba(255,255,255,0.01)";}}>
+
+                {/* Имя */}
+                <div style={{ padding: "10px 12px", cursor: "pointer" }} onClick={function(){setSelected(client);setActivePhase(null);}}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{client.name}</div>
+                  {client.title && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{client.title}</div>}
+                  {client.location && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>📍 {client.location}</div>}
+                </div>
+
+                {/* Тариф */}
+                <div style={{ padding: "10px 12px", display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 11, color: "#A78BFA", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)", padding: "2px 7px", borderRadius: 20, fontWeight: 600 }}>{tarShort}</span>
+                </div>
+
+                {/* Куратор */}
+                <div style={{ padding: "10px 12px", display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>{(client.curator||"").split(" ")[0]}</span>
+                </div>
+
+                {/* Статус с дропдауном */}
+                <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", position: "relative" }}>
+                  {(function() {
+                    var isOpen = openStatusMenu === client.id;
+                    return (
+                      <div style={{ position: "relative" }}>
+                        <span onClick={function(e){e.stopPropagation();setOpenStatusMenu(isOpen?null:client.id);}}
+                          style={{ fontSize: 11, color: st.color, background: st.color+"15", border: "1px solid "+st.color+"30", padding: "3px 8px", borderRadius: 20, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                          {st.icon} {st.label} ▾
+                        </span>
+                        {isOpen && (
+                          <div onClick={function(e){e.stopPropagation();}}
+                            style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 100, background: "#1a1535", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, overflow: "hidden", minWidth: 180, boxShadow: "0 8px 24px rgba(0,0,0,0.6)", whiteSpace: "nowrap" }}>
+                            {STATUS_STAGES.map(function(s) {
+                              var isAct = client.status === s.id;
+                              return (
+                                <div key={s.id} onClick={function(){updateStatus(client.id,s.id);setOpenStatusMenu(null);}}
+                                  style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 13px", cursor:"pointer", background:isAct?s.color+"18":"transparent", borderLeft:isAct?"2px solid "+s.color:"2px solid transparent" }}
+                                  onMouseEnter={function(e){if(!isAct)e.currentTarget.style.background="rgba(255,255,255,0.05)";}}
+                                  onMouseLeave={function(e){if(!isAct)e.currentTarget.style.background="transparent";}}>
+                                  <span style={{fontSize:13}}>{s.icon}</span>
+                                  <span style={{fontSize:12,color:isAct?s.color:"rgba(255,255,255,0.65)",fontWeight:isAct?700:400}}>{s.label}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Ментор */}
+                <div style={{ padding: "10px 12px", display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 11, color: client.mentor ? "#F472B6" : "rgba(255,255,255,0.2)" }}>{client.mentor ? client.mentor.split(" ")[0] : "—"}</span>
+                </div>
+
+                {/* Неделя */}
+                <div style={{ padding: "10px 12px", display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>{client.week || "—"}</span>
+                </div>
+
+                {/* Дней в программе */}
+                <div style={{ padding: "10px 12px", display: "flex", alignItems: "center" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: daysColor }}>{days > 0 ? "День "+days : "—"}</span>
+                </div>
+
+                {/* Действия */}
+                <div style={{ padding: "10px 8px", display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
+                  <button onClick={function(){toggleArchive(client);}} title={client.archived?"Восстановить":"Архивировать"}
+                    style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", background: "none", border: "none", cursor: "pointer", padding: "3px 5px" }}>
+                    {client.archived ? "♻️" : "📦"}
+                  </button>
+                  {canEdit && (
+                    <button onClick={function(){if(window.confirm("Удалить "+client.name+"?")){removeClient(client.id);}}}
+                      style={{ fontSize: 12, color: "rgba(248,113,113,0.4)", background: "none", border: "none", cursor: "pointer", padding: "3px 5px" }}>✕</button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.25)", textAlign: "right" }}>
+        Показано: {filtered.length} из {showArchived ? archivedClients.length : activeClients.length}
+      </div>
     </div>
   );
 }
+
+// 16. МЕНТОР — КОМПОНЕНТЫ
+// ============================================================
 
 function MentorRoleView() {
   var sections = [
@@ -4210,6 +3423,375 @@ function MentorView({ currentUser, isCurator }) {
     </div>
   );
 }
+// ============================================================
+// 19. АНАЛИТИКА — АДМИНКА
+// ============================================================
+
+function AnalyticsView({ currentUser }) {
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState(new Date(new Date().setMonth(new Date().getMonth()-3)).toISOString().slice(0,10));
+  const [dateTo, setDateTo] = useState(new Date().toISOString().slice(0,10));
+  const [activeTab, setActiveTab] = useState("overview");
+
+  useEffect(function() {
+    sbLoadClients().then(function(data) {
+      if (data) setClients(data.clients);
+      setLoading(false);
+    }).catch(function() { setLoading(false); });
+  }, []);
+
+  if (loading) return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:300, gap:12 }}>
+      <div style={{ width:20, height:20, border:"2px solid rgba(167,139,250,0.3)", borderTop:"2px solid #A78BFA", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+      <span style={{ color:"rgba(255,255,255,0.4)", fontSize:14 }}>Загружаем аналитику...</span>
+    </div>
+  );
+
+  var active = clients.filter(function(c) { return !c.archived; });
+  var all = clients;
+
+  // Статусы
+  var offers = all.filter(function(c) { return ["offer","offer_fee"].includes(c.status); });
+  var refunds = all.filter(function(c) { return ["refund","part_refund","offer_refund"].includes(c.status); });
+  var done = all.filter(function(c) { return c.status === "done"; });
+  var paused = all.filter(function(c) { return c.status === "pause"; });
+  var convRate = all.length ? Math.round((offers.length + done.length) / all.length * 100) : 0;
+
+  // Воронка — только активные статусы
+  var funnelIds = ["strategy","resume","linkedin","automation","learning","rejections","screening","interviews","offer_nego","support"];
+  var funnelCounts = funnelIds.map(function(id) {
+    var st = STATUS_STAGES.find(function(s) { return s.id === id; });
+    return { id: id, label: st ? st.label : id, icon: st ? st.icon : "", color: st ? st.color : "#fff", count: active.filter(function(c) { return c.status === id; }).length };
+  });
+
+  // Нагрузка кураторов
+  var curatorStats = CURATORS.map(function(name) {
+    var mine = all.filter(function(c) { return c.curator === name; });
+    var myActive = mine.filter(function(c) { return !c.archived; });
+    var myOffers = mine.filter(function(c) { return ["offer","offer_fee","done"].includes(c.status); });
+    var conv = mine.length ? Math.round(myOffers.length / mine.length * 100) : 0;
+    return { name: name, total: mine.length, active: myActive.length, offers: myOffers.length, conv: conv };
+  }).filter(function(c) { return c.total > 0; });
+
+  // Нагрузка менторов
+  var mentorNames = Array.from(new Set(all.map(function(c) { return c.mentor; }).filter(Boolean)));
+  var mentorStats = mentorNames.map(function(name) {
+    var mine = all.filter(function(c) { return c.mentor === name; });
+    var myActive = mine.filter(function(c) { return !c.archived; });
+    return { name: name, total: mine.length, active: myActive.length };
+  }).sort(function(a,b) { return b.active - a.active; });
+
+  // Конверсия по тайтлам
+  var titleMap = {};
+  all.forEach(function(c) {
+    var t = (c.title || "Не указано").trim();
+    if (!t) t = "Не указано";
+    if (!titleMap[t]) titleMap[t] = { total: 0, offers: 0 };
+    titleMap[t].total++;
+    if (["offer","offer_fee","done"].includes(c.status)) titleMap[t].offers++;
+  });
+  var titleStats = Object.entries(titleMap)
+    .filter(function(e) { return e[1].total >= 2; })
+    .map(function(e) { return { title: e[0], total: e[1].total, offers: e[1].offers, conv: Math.round(e[1].offers/e[1].total*100) }; })
+    .sort(function(a,b) { return b.offers - a.offers; })
+    .slice(0, 15);
+
+  // Временные показатели
+  function daysBetween(d1, d2) {
+    try { return Math.round((new Date(d2) - new Date(d1)) / 86400000); } catch(e) { return null; }
+  }
+
+  var offerClients = all.filter(function(c) { return ["offer","offer_fee","done"].includes(c.status) && c.startDate; });
+  var avgDaysToOffer = offerClients.length ? Math.round(offerClients.reduce(function(s,c) {
+    var d = daysBetween(c.startDate, new Date().toISOString().slice(0,10));
+    return s + (d || 0);
+  }, 0) / offerClients.length) : null;
+
+  // Тарифы
+  var tariffMap = {};
+  all.forEach(function(c) {
+    var t = TARIFF_LABELS[c.tariff] || c.tariff || "—";
+    if (!tariffMap[t]) tariffMap[t] = { total: 0, active: 0, offers: 0 };
+    tariffMap[t].total++;
+    if (!c.archived) tariffMap[t].active++;
+    if (["offer","offer_fee","done"].includes(c.status)) tariffMap[t].offers++;
+  });
+  var tariffStats = Object.entries(tariffMap)
+    .map(function(e) { return { name: e[0], total: e[1].total, active: e[1].active, offers: e[1].offers, conv: e[1].total ? Math.round(e[1].offers/e[1].total*100) : 0 }; })
+    .sort(function(a,b) { return b.total - a.total; });
+
+  var TABS = [
+    { id: "overview", label: "Обзор", icon: "📊" },
+    { id: "funnel", label: "Воронка", icon: "🔽" },
+    { id: "team", label: "Команда", icon: "👥" },
+    { id: "titles", label: "По тайтлам", icon: "💼" },
+    { id: "tariffs", label: "По тарифам", icon: "💎" },
+  ];
+
+  var cardStyle = { background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "18px 20px" };
+  var labelStyle = { fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 8 };
+
+  return (
+    <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 21, fontWeight: 800, color: "#fff" }}>📊 Аналитика</h1>
+        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 3 }}>Данные по всем {all.length} клиентам</p>
+      </div>
+
+      {/* Вкладки */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+        {TABS.map(function(tab) {
+          var isA = activeTab === tab.id;
+          return (
+            <button key={tab.id} onClick={function() { setActiveTab(tab.id); }}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:10, border:isA?"1px solid rgba(167,139,250,0.4)":"1px solid rgba(255,255,255,0.08)", background:isA?"rgba(167,139,250,0.12)":"rgba(255,255,255,0.03)", color:isA?"#A78BFA":"rgba(255,255,255,0.4)", fontWeight:isA?700:400, fontSize:13, cursor:"pointer" }}>
+              {tab.icon} {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ОБЗОР */}
+      {activeTab === "overview" && (
+        <div>
+          {/* KPI карточки */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:10, marginBottom:20 }}>
+            {[
+              { label:"Всего клиентов", val:all.length, color:"#A78BFA", icon:"👥" },
+              { label:"Активных", val:active.length, color:"#34D399", icon:"🟢" },
+              { label:"На паузе", val:paused.length, color:"#94A3B8", icon:"⏸️" },
+              { label:"Офферов", val:offers.length+done.length, color:"#FBBF24", icon:"🎉" },
+              { label:"Рефандов", val:refunds.length, color:"#F87171", icon:"↩️" },
+              { label:"Конверсия", val:convRate+"%", color:"#67E8F9", icon:"📈" },
+            ].map(function(k) {
+              return (
+                <div key={k.label} style={{ background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:12, padding:"14px 16px" }}>
+                  <div style={{ fontSize:20, marginBottom:6 }}>{k.icon}</div>
+                  <div style={{ fontSize:24, fontWeight:900, color:k.color }}>{k.val}</div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", marginTop:4 }}>{k.label}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Мини воронка */}
+          <div style={cardStyle}>
+            <div style={labelStyle}>Воронка (активные)</div>
+            <div style={{ display:"flex", gap:4, alignItems:"center", flexWrap:"wrap" }}>
+              {funnelCounts.filter(function(f){return f.count>0;}).map(function(f, i, arr) {
+                return (
+                  <div key={f.id} style={{ display:"flex", alignItems:"center", gap:4 }}>
+                    <div style={{ textAlign:"center", padding:"8px 10px", borderRadius:8, background:f.color+"12", border:"1px solid "+f.color+"30" }}>
+                      <div style={{ fontSize:16, fontWeight:900, color:f.color }}>{f.count}</div>
+                      <div style={{ fontSize:9, color:"rgba(255,255,255,0.4)", marginTop:2, maxWidth:60, lineHeight:1.2 }}>{f.label}</div>
+                    </div>
+                    {i < arr.length-1 && <span style={{ color:"rgba(255,255,255,0.15)", fontSize:16 }}>›</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Средние показатели */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:12 }}>
+            <div style={cardStyle}>
+              <div style={labelStyle}>Время до оффера</div>
+              {avgDaysToOffer ? (
+                <div>
+                  <div style={{ fontSize:36, fontWeight:900, color:"#FBBF24" }}>{avgDaysToOffer}<span style={{ fontSize:14, color:"rgba(255,255,255,0.4)", fontWeight:400 }}> дней</span></div>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.35)", marginTop:4 }}>среднее по {offerClients.length} клиентам с оффером</div>
+                </div>
+              ) : <div style={{ fontSize:13, color:"rgba(255,255,255,0.25)" }}>Недостаточно данных</div>}
+            </div>
+            <div style={cardStyle}>
+              <div style={labelStyle}>Статусы архива</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {[
+                  { label:"Done", count:done.length, color:"#64748B" },
+                  { label:"Оффер", count:offers.length, color:"#34D399" },
+                  { label:"Рефанды", count:refunds.length, color:"#F87171" },
+                ].map(function(s) {
+                  var pct = all.length ? Math.round(s.count/all.length*100) : 0;
+                  return (
+                    <div key={s.label}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                        <span style={{ fontSize:12, color:"rgba(255,255,255,0.5)" }}>{s.label}</span>
+                        <span style={{ fontSize:12, fontWeight:700, color:s.color }}>{s.count} ({pct}%)</span>
+                      </div>
+                      <div style={{ height:4, background:"rgba(255,255,255,0.06)", borderRadius:99 }}>
+                        <div style={{ height:"100%", width:pct+"%", background:s.color, borderRadius:99 }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ВОРОНКА ДЕТАЛЬНО */}
+      {activeTab === "funnel" && (
+        <div>
+          <div style={cardStyle}>
+            <div style={labelStyle}>Детальная воронка — активные клиенты</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:8 }}>
+              {funnelCounts.map(function(f, i) {
+                var maxCount = Math.max.apply(null, funnelCounts.map(function(fc){return fc.count;})) || 1;
+                var pct = Math.round(f.count/maxCount*100);
+                var convFromFirst = funnelCounts[0].count ? Math.round(f.count/funnelCounts[0].count*100) : 0;
+                return (
+                  <div key={f.id} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <div style={{ width:140, fontSize:12, color:"rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                      <span style={{ fontSize:14 }}>{f.icon}</span>
+                      <span>{f.label}</span>
+                    </div>
+                    <div style={{ flex:1, height:28, background:"rgba(255,255,255,0.04)", borderRadius:6, position:"relative", overflow:"hidden" }}>
+                      <div style={{ position:"absolute", left:0, top:0, height:"100%", width:pct+"%", background:f.color+"40", borderRadius:6, transition:"width 0.4s" }} />
+                      <div style={{ position:"absolute", left:8, top:6, fontSize:12, fontWeight:700, color:f.color }}>{f.count} клиентов</div>
+                    </div>
+                    <div style={{ width:60, textAlign:"right", fontSize:12, color:"rgba(255,255,255,0.35)" }}>
+                      {i === 0 ? "100%" : convFromFirst+"%"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Конверсия между этапами */}
+          <div style={Object.assign({}, cardStyle, { marginTop:12 })}>
+            <div style={labelStyle}>Конверсия между этапами</div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:8 }}>
+              {funnelCounts.slice(0,-1).map(function(f, i) {
+                var next = funnelCounts[i+1];
+                var conv = f.count ? Math.round(next.count/f.count*100) : 0;
+                return (
+                  <div key={f.id} style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10, padding:"10px 14px", textAlign:"center", minWidth:100 }}>
+                    <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginBottom:4 }}>{f.label} → {next.label}</div>
+                    <div style={{ fontSize:20, fontWeight:900, color:conv>50?"#34D399":conv>25?"#FBBF24":"#F87171" }}>{conv}%</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* КОМАНДА */}
+      {activeTab === "team" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {/* Кураторы */}
+          <div style={cardStyle}>
+            <div style={labelStyle}>Нагрузка кураторов</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:10, marginTop:8 }}>
+              {curatorStats.map(function(c) {
+                return (
+                  <div key={c.name} style={{ background:"rgba(167,139,250,0.06)", border:"1px solid rgba(167,139,250,0.15)", borderRadius:12, padding:"14px 16px" }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#A78BFA", marginBottom:10 }}>🎓 {c.name.split(" ")[0]}</div>
+                    {[
+                      { label:"Всего", val:c.total, color:"rgba(255,255,255,0.6)" },
+                      { label:"Активных", val:c.active, color:"#34D399" },
+                      { label:"Офферов", val:c.offers, color:"#FBBF24" },
+                      { label:"Конверсия", val:c.conv+"%", color:"#67E8F9" },
+                    ].map(function(row) {
+                      return (
+                        <div key={row.label} style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                          <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)" }}>{row.label}</span>
+                          <span style={{ fontSize:12, fontWeight:700, color:row.color }}>{row.val}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Менторы */}
+          {mentorStats.length > 0 && (
+            <div style={cardStyle}>
+              <div style={labelStyle}>Нагрузка менторов</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:10, marginTop:8 }}>
+                {mentorStats.map(function(m) {
+                  return (
+                    <div key={m.name} style={{ background:"rgba(244,114,182,0.06)", border:"1px solid rgba(244,114,182,0.15)", borderRadius:12, padding:"14px 16px" }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#F472B6", marginBottom:8 }}>🧠 {m.name.split(" ")[0]}</div>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                        <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)" }}>Всего</span>
+                        <span style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.6)" }}>{m.total}</span>
+                      </div>
+                      <div style={{ display:"flex", justifyContent:"space-between" }}>
+                        <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)" }}>Активных</span>
+                        <span style={{ fontSize:12, fontWeight:700, color:"#34D399" }}>{m.active}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ПО ТАЙТЛАМ */}
+      {activeTab === "titles" && (
+        <div style={cardStyle}>
+          <div style={labelStyle}>Конверсия в оффер по должностям (мин. 2 клиента)</div>
+          <div style={{ marginTop:8 }}>
+            {/* Шапка */}
+            <div style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 80px", gap:8, padding:"8px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", marginBottom:4 }}>
+              {["Должность","Всего","Офферов","Конверсия"].map(function(h) {
+                return <div key={h} style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.35)", textTransform:"uppercase" }}>{h}</div>;
+              })}
+            </div>
+            {titleStats.map(function(t, i) {
+              return (
+                <div key={t.title} style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 80px", gap:8, padding:"9px 12px", borderBottom:i<titleStats.length-1?"1px solid rgba(255,255,255,0.04)":"none", background:i%2===0?"transparent":"rgba(255,255,255,0.01)" }}>
+                  <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)" }}>{t.title}</div>
+                  <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>{t.total}</div>
+                  <div style={{ fontSize:13, fontWeight:600, color:t.offers>0?"#FBBF24":"rgba(255,255,255,0.25)" }}>{t.offers}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:t.conv>30?"#34D399":t.conv>10?"#FBBF24":"#F87171" }}>{t.conv}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ПО ТАРИФАМ */}
+      {activeTab === "tariffs" && (
+        <div style={cardStyle}>
+          <div style={labelStyle}>Статистика по тарифам</div>
+          <div style={{ marginTop:8 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 80px 80px", gap:8, padding:"8px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", marginBottom:4 }}>
+              {["Тариф","Всего","Активных","Офферов","Конверсия"].map(function(h) {
+                return <div key={h} style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.35)", textTransform:"uppercase" }}>{h}</div>;
+              })}
+            </div>
+            {tariffStats.map(function(t, i) {
+              return (
+                <div key={t.name} style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 80px 80px", gap:8, padding:"9px 12px", borderBottom:i<tariffStats.length-1?"1px solid rgba(255,255,255,0.04)":"none", background:i%2===0?"transparent":"rgba(255,255,255,0.01)" }}>
+                  <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)", fontWeight:600 }}>{t.name}</div>
+                  <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>{t.total}</div>
+                  <div style={{ fontSize:13, color:"#34D399", fontWeight:600 }}>{t.active}</div>
+                  <div style={{ fontSize:13, color:t.offers>0?"#FBBF24":"rgba(255,255,255,0.25)", fontWeight:600 }}>{t.offers}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:t.conv>30?"#34D399":t.conv>10?"#FBBF24":"rgba(255,255,255,0.4)" }}>{t.conv}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// 19. SALES И МАРКЕТИНГ
+// ============================================================
+
 function SalesView({ currentUser }) {
   return (
     <div style={{ maxWidth: 700, padding: "40px 0" }}>
@@ -4270,6 +3852,10 @@ function RoleShell({ user, onLogout, isMobile, children }) {
   );
 }
 
+// ============================================================
+// 21. ГЛАВНЫЙ КОМПОНЕНТ — РОУТИНГ
+// ============================================================
+
 export default function App() {
   var [user, setUser] = useState(null);
   var [sidebar, setSidebar] = useState(true);
@@ -4321,15 +3907,16 @@ export default function App() {
     { id: "ai",             label: "AI-помощник",        icon: "✨" },
     { id: "links",          label: "Полезные ссылки",    icon: "🔗" },
   ] : [
-    { id: "company",   label: "Компания",          icon: "🏢" },
-    { id: "curator",   label: "Роль куратора",      icon: "🎓" },
-    { id: "knowledge", label: "База знаний",        icon: "📚" },
-    { id: "tariffs",   label: "Тарифы и продукты",  icon: "💎" },
-    { id: "guide",     label: "Гайд",               icon: "🗺️" },
-    { id: "checklist", label: "Чеклист",             icon: "✅" },
-    { id: "clients",   label: "Клиенты",             icon: "👥" },
-    { id: "ai",        label: "AI-помощник",         icon: "✨" },
-    { id: "links",     label: "Полезные ссылки",     icon: "🔗" },
+    { id: "company",        label: "Компания",          icon: "🏢" },
+    { id: "curator",        label: "Роль куратора",      icon: "🎓" },
+    { id: "knowledge",      label: "База знаний",        icon: "📚" },
+    { id: "tariffs",        label: "Тарифы и продукты",  icon: "💎" },
+    { id: "guide",          label: "Гайд",               icon: "🗺️" },
+    { id: "checklist",      label: "Чеклист",             icon: "✅" },
+    { id: "clients",        label: "Клиенты",             icon: "👥" },
+    { id: "analytics",      label: "Аналитика",           icon: "📊" },
+    { id: "ai",             label: "AI-помощник",         icon: "✨" },
+    { id: "links",          label: "Полезные ссылки",     icon: "🔗" },
   ];
 
   return (
@@ -4473,6 +4060,7 @@ export default function App() {
 
         <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 10px" : "20px 24px", paddingBottom: isMobile ? "80px" : "20px" }} onClick={function() { setNotif(false); setUserMenu(false); }}>
           {activeNav === "clients" ? <ClientsView currentUser={user} /> : null}
+          {activeNav === "analytics" ? <AnalyticsView currentUser={user} /> : null}
           {activeNav === "mentor_clients" ? <MentorView currentUser={user} isCurator={false} /> : null}
           {activeNav === "mentor_role" ? <MentorRoleView /> : null}
           {activeNav === "checklist" ? (isMentor ? <MentorScheduleView currentUser={user} /> : <ChecklistView />) : null}
