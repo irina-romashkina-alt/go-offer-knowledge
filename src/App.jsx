@@ -2803,10 +2803,33 @@ function ClientsView({ currentUser }) {
                 onMouseLeave={function(e){e.currentTarget.style.background=idx%2===0?"transparent":"rgba(255,255,255,0.01)";}}>
 
                 {/* Имя */}
-                <div style={{ padding: "10px 12px", cursor: "pointer" }} onClick={function(){setSelected(client);setActivePhase(null);}}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{client.name}</div>
-                  {client.title && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{client.title}</div>}
-                  {client.location && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>📍 {client.location}</div>}
+                <div style={{ padding: "10px 12px" }}>
+                  {(function() {
+                    var isEditingName = canEdit; // показываем иконку редактирования только редакторам
+                    return (
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+                        <div style={{ flex: 1, cursor: "pointer" }} onClick={function(){setSelected(client);setActivePhase(null);}}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{client.name}</div>
+                          {client.title && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{client.title}</div>}
+                          {client.location && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>📍 {client.location}</div>}
+                        </div>
+                        {canEdit && (
+                          <button onClick={function(e) {
+                            e.stopPropagation();
+                            var newName = window.prompt("Имя клиента:", client.name);
+                            if (newName && newName.trim() && newName.trim() !== client.name) {
+                              var updated = Object.assign({}, client, { name: newName.trim() });
+                              sbSaveClient(updated, checkedMap, commentsMap);
+                              setClients(function(p) { return p.map(function(c) { return c.id === client.id ? updated : c; }); });
+                            }
+                          }} title="Редактировать имя"
+                            style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", flexShrink: 0, marginTop: 2 }}>
+                            ✏️
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Тариф */}
