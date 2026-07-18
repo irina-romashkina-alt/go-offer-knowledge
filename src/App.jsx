@@ -2375,7 +2375,36 @@ function ClientsView({ currentUser }) {
     setClients(function(p) {
       var updated = p.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: newStatus }) : c; });
       var client = updated.find(function(c) { return c.id === clientId; });
-      if (client) sbSaveClient(client, checkedMap, commentsMap);
+      if (client) {
+        sbSaveClient(client, checkedMap, commentsMap);
+        // Автосоздание записи в офферах при переходе на статус оффера
+        if (["offer","offer_fee"].includes(newStatus)) {
+          sbFetch("offers?name=eq." + encodeURIComponent(client.name) + "&select=id").then(function(existing) {
+            if (!existing || !existing.length) {
+              sbFetch("offers", {
+                method: "POST",
+                body: JSON.stringify({
+                  id: "auto_" + client.id,
+                  name: client.name,
+                  company: "",
+                  title: client.title || "",
+                  offer_date: new Date().toISOString().slice(0,10),
+                  start_date: client.startDate || "",
+                  start_work_date: "",
+                  offer_salary: "",
+                  location: client.location || "",
+                  telegram: client.telegram || "",
+                  linkedin: client.linkedinUrl || "",
+                  tariff: client.tariff || "",
+                  duration: "",
+                  interview_link: "",
+                  other_offers: "",
+                })
+              });
+            }
+          });
+        }
+      }
       return updated;
     });
     if (selected && selected.id === clientId) {
@@ -3498,28 +3527,35 @@ async function sbLoadOffers() {
       telegram: r.telegram || "", linkedin: r.linkedin || "",
       tariff: r.tariff || "", duration: r.duration || "",
       interviewLink: r.interview_link || "", otherOffers: r.other_offers || "",
+      offerStatus: r.offer_status || "Не указано",
+      comment: r.comment || "",
+      notClaiming: r.not_claiming || false,
+      curator: r.curator || "",
+      archived: r.archived || false,
     };
   });
 }
 
 // ── РАЗДЕЛ ОФФЕРОВ ─────────────────────────────────────────────────────────────
 function OffersView({ currentUser }) {
+  var canEdit = currentUser && EDITORS.indexOf(currentUser.email.toLowerCase()) >= 0;
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterTariff, setFilterTariff] = useState("Все");
+  const [showArchived, setShowArchived] = useState(false);
   const [sortCol, setSortCol] = useState("offerDate");
   const [sortDir, setSortDir] = useState("desc");
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  var OFFER_STATUSES = ["Не указано","Торгуется","Проходит БЧ","Ожидает выхода на работу","Вышел на работу","Отклонен","Отозвали"];
 
   var now = new Date();
   const [dateFrom, setDateFrom] = useState("2020-01-01");
   const [dateTo, setDateTo] = useState(now.toISOString().slice(0,10));
 
   function load() {
-    sbLoadOffers().then(function(data) {
-      setOffers(data);
-      setLoading(false);
-    }).catch(function() { setLoading(false); });
+    sbLoadOffers().then(function(data) { setOffers(data); setLoading(false); }).catch(function() { setLoading(false); });
   }
 
   useEffect(function() {
@@ -3528,32 +3564,76 @@ function OffersView({ currentUser }) {
     return function() { clearInterval(interval); };
   }, []);
 
-  var allTariffs = ["Все"].concat(Array.from(new Set(offers.map(function(o){return o.tariff;}).filter(Boolean))));
+  function saveOffer(id) {
+    var toSave = {
+      name: editForm.name, company: editForm.company, title: editForm.title,
+      offer_date: editForm.offerDate, start_work_date: editForm.startWorkDate,
+      offer_salary: editForm.salary, location: editForm.location,
+      telegram: editForm.telegram, tariff: editForm.tariff,
+      duration: editForm.duration, other_offers: editForm.otherOffers,
+      offer_status: editForm.offerStatus, comment: editForm.comment,
+      not_claiming: editForm.notClaiming || false, curator: editForm.curator,
+      // Если статус "Вышел на работу" — архивируем
+      archived: ["Вышел на работу","Отклонен","Отозвали"].includes(editForm.offerStatus),
+    };
+    sbFetch("offers?id=eq." + encodeURIComponent(id), {
+      method: "PATCH",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify(toSave)
+    }).then(function() {
+      setOffers(function(p) { return p.map(function(o) { return o.id === id ? Object.assign({}, o, editForm, { archived: toSave.archived }) : o; }); });
+      setEditingId(null);
+    });
+  }
+
+  function deleteOffer(id) {
+    if (!window.confirm("Удалить эту запись?")) return;
+    sbFetch("offers?id=eq." + encodeURIComponent(id), { method: "DELETE" });
+    setOffers(function(p) { return p.filter(function(o) { return o.id !== id; }); });
+  }
+
+  function quickStatus(o, status) {
+    var archived = ["Вышел на работу","Отклонен","Отозвали"].includes(status);
+    sbFetch("offers?id=eq." + encodeURIComponent(o.id), {
+      method: "PATCH",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ offer_status: status, archived: archived })
+    });
+    setOffers(function(p) { return p.map(function(x) { return x.id === o.id ? Object.assign({}, x, { offerStatus: status, archived: archived }) : x; }); });
+  }
+
+  function startEdit(o) { setEditingId(o.id); setEditForm(Object.assign({}, o)); }
+  function ef(key) { return function(e) { var v = e.target.value; setEditForm(function(p) { return Object.assign({}, p, {[key]: v}); }); }; }
+
+  var inputStyle = { width:"100%", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(167,139,250,0.4)", borderRadius:5, padding:"4px 7px", fontSize:12, color:"#fff", outline:"none", fontFamily:"inherit" };
 
   var filtered = offers.filter(function(o) {
+    if (!showArchived && o.archived) return false;
+    if (showArchived && !o.archived) return false;
     var dateOk = (!o.offerDate || o.offerDate >= dateFrom) && (!o.offerDate || o.offerDate <= dateTo);
-    var searchOk = search === "" || (o.name||"").toLowerCase().includes(search.toLowerCase()) || (o.company||"").toLowerCase().includes(search.toLowerCase()) || (o.title||"").toLowerCase().includes(search.toLowerCase());
-    var tariffOk = filterTariff === "Все" || o.tariff === filterTariff;
-    return dateOk && searchOk && tariffOk;
-  }).sort(function(a, b) {
-    var va = (a[sortCol]||"").toString();
-    var vb = (b[sortCol]||"").toString();
-    return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+    var searchOk = search === "" || (o.name||"").toLowerCase().includes(search.toLowerCase()) || (o.company||"").toLowerCase().includes(search.toLowerCase());
+    return dateOk && searchOk;
+  }).sort(function(a,b) {
+    var va = (a[sortCol]||"").toString(); var vb = (b[sortCol]||"").toString();
+    return sortDir==="asc" ? va.localeCompare(vb) : vb.localeCompare(va);
   });
 
-  function toggleSort(col) {
-    if (sortCol === col) setSortDir(function(d){return d==="asc"?"desc":"asc";});
-    else { setSortCol(col); setSortDir("desc"); }
-  }
+  function toggleSort(col) { if (sortCol===col) setSortDir(function(d){return d==="asc"?"desc":"asc";}); else { setSortCol(col); setSortDir("desc"); } }
+  function SortArr({ col }) { if (sortCol!==col) return <span style={{color:"rgba(255,255,255,0.2)",fontSize:9}}>↕</span>; return <span style={{color:"#A78BFA",fontSize:9}}>{sortDir==="asc"?"↑":"↓"}</span>; }
 
-  function SortArrow({ col }) {
-    if (sortCol !== col) return <span style={{color:"rgba(255,255,255,0.2)",fontSize:9}}>↕</span>;
-    return <span style={{color:"#A78BFA",fontSize:9}}>{sortDir==="asc"?"↑":"↓"}</span>;
-  }
+  var active = offers.filter(function(o){return !o.archived;});
+  var archived = offers.filter(function(o){return o.archived;});
 
-  // Статистика
-  var withSalary = filtered.filter(function(o){return o.salary && parseFloat(o.salary.replace(/[^0-9.]/g,""));});
-  var avgSalary = withSalary.length ? Math.round(withSalary.reduce(function(s,o){return s+(parseFloat(o.salary.replace(/[^0-9.]/g,""))||0);},0)/withSalary.length) : null;
+  // Статус цвета
+  var STATUS_COLORS = {
+    "Не указано":              "#94A3B8",
+    "Торгуется":               "#67E8F9",
+    "Проходит БЧ":             "#A78BFA",
+    "Ожидает выхода на работу":"#FBBF24",
+    "Вышел на работу":         "#34D399",
+    "Отклонен":                "#F87171",
+    "Отозвали":                "#F87171",
+  };
 
   if (loading) return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:300,gap:12}}>
@@ -3563,26 +3643,19 @@ function OffersView({ currentUser }) {
   );
 
   return (
-    <div style={{maxWidth:1200,margin:"0 auto"}}>
-      <div style={{marginBottom:16}}>
-        <h1 style={{fontSize:20,fontWeight:800,color:"#fff"}}>🎉 Офферы</h1>
-        <p style={{color:"rgba(255,255,255,0.35)",fontSize:13,marginTop:2}}>История успехов — {offers.length} офферов</p>
-      </div>
-
-      {/* KPI */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
-        {[
-          {label:"Всего офферов", val:offers.length, color:"#FBBF24", icon:"🎉"},
-          {label:"За период", val:filtered.length, color:"#A78BFA", icon:"📅"},
-          {label:"Средняя зп", val:avgSalary?"$"+avgSalary.toLocaleString():"—", color:"#34D399", icon:"💰"},
-          {label:"С интервью", val:filtered.filter(function(o){return o.interviewLink;}).length, color:"#67E8F9", icon:"🎬"},
-        ].map(function(k){
-          return <div key={k.label} style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"14px 16px"}}>
-            <div style={{fontSize:18,marginBottom:5}}>{k.icon}</div>
-            <div style={{fontSize:22,fontWeight:900,color:k.color}}>{k.val}</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginTop:3}}>{k.label}</div>
-          </div>;
-        })}
+    <div style={{maxWidth:1400,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+        <div>
+          <h1 style={{fontSize:20,fontWeight:800,color:"#fff"}}>🎉 Офферы</h1>
+          <p style={{color:"rgba(255,255,255,0.35)",fontSize:13,marginTop:2}}>{active.length} активных · {archived.length} вышли на работу</p>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={function(){setShowArchived(function(p){return !p;});}}
+            style={{fontSize:12,color:showArchived?"#34D399":"rgba(255,255,255,0.4)",background:showArchived?"rgba(52,211,153,0.1)":"rgba(255,255,255,0.04)",border:"1px solid "+(showArchived?"rgba(52,211,153,0.3)":"rgba(255,255,255,0.08)"),borderRadius:9,padding:"7px 14px",cursor:"pointer"}}>
+            {showArchived ? "👁 Активные" : "✅ Вышли на работу ("+archived.length+")"}
+          </button>
+          <button onClick={load} style={{fontSize:13,color:"rgba(255,255,255,0.4)",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:9,padding:"7px 10px",cursor:"pointer"}}>🔄</button>
+        </div>
       </div>
 
       {/* Фильтры */}
@@ -3595,87 +3668,148 @@ function OffersView({ currentUser }) {
           <input type="date" value={dateTo} onChange={function(e){setDateTo(e.target.value);}}
             style={{background:"transparent",border:"none",color:"#fff",fontSize:12,fontWeight:600,outline:"none",fontFamily:"inherit",cursor:"pointer"}} />
         </div>
-        {[
-          {label:"Месяц", from:new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10)},
-          {label:"Квартал", from:new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1).toISOString().slice(0,10)},
-          {label:"Год", from:new Date(now.getFullYear(),0,1).toISOString().slice(0,10)},
-          {label:"Всё", from:"2020-01-01"},
-        ].map(function(p){
+        {[{label:"Месяц",from:new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10)},{label:"Квартал",from:new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1).toISOString().slice(0,10)},{label:"Год",from:new Date(now.getFullYear(),0,1).toISOString().slice(0,10)},{label:"Всё",from:"2020-01-01"}].map(function(p){
           return <button key={p.label} onClick={function(){setDateFrom(p.from);setDateTo(now.toISOString().slice(0,10));}}
             style={{fontSize:11,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"5px 10px",cursor:"pointer"}}>{p.label}</button>;
         })}
         <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:9,padding:"6px 10px",flex:1,minWidth:160}}>
           <span style={{fontSize:12,color:"rgba(255,255,255,0.2)"}}>🔍</span>
-          <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Поиск по имени, компании, тайтлу..."
+          <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Поиск по имени, компании..."
             style={{background:"none",border:"none",outline:"none",fontSize:12,color:"#fff",width:"100%",fontFamily:"inherit"}} />
         </div>
-        <select value={filterTariff} onChange={function(e){setFilterTariff(e.target.value);}}
-          style={{background:"#1a1535",border:"1px solid rgba(255,255,255,0.1)",borderRadius:9,padding:"7px 12px",fontSize:12,color:"rgba(255,255,255,0.7)",outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
-          {allTariffs.map(function(t){return <option key={t} value={t}>{t==="Все"?"Все тарифы":t}</option>;})}
-        </select>
-        <button onClick={load} title="Обновить" style={{fontSize:13,color:"rgba(255,255,255,0.4)",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:9,padding:"7px 10px",cursor:"pointer"}}>🔄</button>
       </div>
 
       {/* Таблица */}
-      <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,overflow:"hidden"}}>
+      <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,overflow:"auto"}}>
         {/* Шапка */}
-        <div style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1.2fr 1fr 1fr 0.8fr 0.8fr",gap:0,borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1.5fr 0.9fr 0.9fr 1fr 1.2fr 1.5fr 0.8fr 60px",gap:0,borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)",minWidth:1100}}>
           {[
-            {label:"Имя / Тайтл", col:"name"},
-            {label:"Компания", col:"company"},
-            {label:"Тариф / Длит.", col:"tariff"},
+            {label:"Имя клиента", col:"name"},
+            {label:"Компания / Тайтл", col:"company"},
+            {label:"Тариф", col:"tariff"},
             {label:"Дата оффера", col:"offerDate"},
             {label:"Выход на работу", col:"startWorkDate"},
-            {label:"Зарплата", col:"salary"},
-            {label:"Локация", col:"location"},
+            {label:"Сумма оффера", col:"salary"},
+            {label:"Комментарий", col:"comment"},
+            {label:"Статус", col:"offerStatus"},
+            {label:"", col:null},
           ].map(function(h){
-            return <div key={h.col} onClick={function(){toggleSort(h.col);}}
-              style={{padding:"10px 12px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.6px",cursor:"pointer",display:"flex",alignItems:"center",gap:4,userSelect:"none"}}>
-              {h.label} <SortArrow col={h.col} />
+            return <div key={h.col||"act"} onClick={h.col?function(){toggleSort(h.col);}:null}
+              style={{padding:"10px 12px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.5px",cursor:h.col?"pointer":"default",display:"flex",alignItems:"center",gap:4,userSelect:"none",whiteSpace:"nowrap"}}>
+              {h.label} {h.col && <SortArr col={h.col} />}
             </div>;
           })}
         </div>
 
-        {/* Строки */}
         {filtered.length === 0 ? (
           <div style={{textAlign:"center",padding:"40px",color:"rgba(255,255,255,0.25)",fontSize:14}}>Офферов не найдено</div>
         ) : filtered.map(function(o, idx) {
-          var salaryNum = o.salary ? parseFloat(o.salary.replace(/[^0-9.]/g,"")) : 0;
+          var isEditing = editingId === o.id;
+          var stColor = STATUS_COLORS[o.offerStatus] || "#94A3B8";
+
+          if (isEditing && canEdit) {
+            return (
+              <div key={o.id} style={{display:"grid",gridTemplateColumns:"2fr 1.5fr 0.9fr 0.9fr 1fr 1.2fr 1.5fr 0.8fr 60px",gap:0,borderBottom:"1px solid rgba(167,139,250,0.2)",background:"rgba(167,139,250,0.06)",minWidth:1100}}>
+                <div style={{padding:"8px 10px"}}>
+                  <input value={editForm.name||""} onChange={ef("name")} placeholder="Имя" style={inputStyle} />
+                  <input value={editForm.telegram||""} onChange={ef("telegram")} placeholder="Telegram" style={Object.assign({},inputStyle,{marginTop:4,fontSize:11})} />
+                </div>
+                <div style={{padding:"8px 10px"}}>
+                  <input value={editForm.company||""} onChange={ef("company")} placeholder="Компания" style={inputStyle} />
+                  <input value={editForm.title||""} onChange={ef("title")} placeholder="Тайтл" style={Object.assign({},inputStyle,{marginTop:4,fontSize:11})} />
+                </div>
+                <div style={{padding:"8px 10px"}}>
+                  <input value={editForm.tariff||""} onChange={ef("tariff")} placeholder="Тариф" style={inputStyle} />
+                  <input value={editForm.location||""} onChange={ef("location")} placeholder="Локация" style={Object.assign({},inputStyle,{marginTop:4,fontSize:11})} />
+                </div>
+                <div style={{padding:"8px 10px"}}>
+                  <input type="date" value={editForm.offerDate||""} onChange={ef("offerDate")} style={inputStyle} />
+                </div>
+                <div style={{padding:"8px 10px"}}>
+                  <input type="date" value={editForm.startWorkDate||""} onChange={ef("startWorkDate")} style={inputStyle} />
+                </div>
+                <div style={{padding:"8px 10px"}}>
+                  <input value={editForm.salary||""} onChange={ef("salary")} placeholder="$100,000" style={inputStyle} />
+                </div>
+                <div style={{padding:"8px 10px"}}>
+                  <textarea value={editForm.comment||""} onChange={ef("comment")} placeholder="Комментарий..." style={Object.assign({},inputStyle,{resize:"vertical",minHeight:50})} />
+                </div>
+                <div style={{padding:"8px 10px"}}>
+                  <select value={editForm.offerStatus||"Не указано"} onChange={ef("offerStatus")} style={Object.assign({},inputStyle,{cursor:"pointer"})}>
+                    {OFFER_STATUSES.map(function(s){return <option key={s} value={s}>{s}</option>;})}
+                  </select>
+                </div>
+                <div style={{padding:"8px 6px",display:"flex",flexDirection:"column",gap:4,alignItems:"center",justifyContent:"center"}}>
+                  <button onClick={function(){saveOffer(o.id);}} style={{fontSize:11,fontWeight:700,color:"#fff",background:"#A78BFA",border:"none",borderRadius:5,padding:"5px 8px",cursor:"pointer",width:"100%"}}>✓</button>
+                  <button onClick={function(){setEditingId(null);}} style={{fontSize:11,color:"rgba(255,255,255,0.4)",background:"rgba(255,255,255,0.05)",border:"none",borderRadius:5,padding:"5px 8px",cursor:"pointer",width:"100%"}}>✕</button>
+                </div>
+              </div>
+            );
+          }
+
           return (
-            <div key={o.id} style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1.2fr 1fr 1fr 0.8fr 0.8fr",gap:0,borderBottom:idx<filtered.length-1?"1px solid rgba(255,255,255,0.04)":"none",background:idx%2===0?"transparent":"rgba(255,255,255,0.01)",transition:"background 0.1s"}}
-              onMouseEnter={function(e){e.currentTarget.style.background="rgba(251,191,36,0.05)";}}
+            <div key={o.id} style={{display:"grid",gridTemplateColumns:"2fr 1.5fr 0.9fr 0.9fr 1fr 1.2fr 1.5fr 0.8fr 60px",gap:0,borderBottom:idx<filtered.length-1?"1px solid rgba(255,255,255,0.04)":"none",background:idx%2===0?"transparent":"rgba(255,255,255,0.01)",minWidth:1100}}
+              onMouseEnter={function(e){e.currentTarget.style.background="rgba(251,191,36,0.04)";}}
               onMouseLeave={function(e){e.currentTarget.style.background=idx%2===0?"transparent":"rgba(255,255,255,0.01)";}}>
-              <div style={{padding:"11px 12px"}}>
+
+              {/* Имя */}
+              <div style={{padding:"10px 12px"}}>
                 <div style={{fontSize:13,fontWeight:600,color:"#fff"}}>{o.name}</div>
+                {o.telegram && <div style={{fontSize:10,color:"#67E8F9",marginTop:2}}>{o.telegram}</div>}
+                {o.interviewLink && <a href={o.interviewLink} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#FBBF24",textDecoration:"none"}}>🎬 интервью</a>}
+              </div>
+
+              {/* Компания / Тайтл */}
+              <div style={{padding:"10px 12px"}}>
+                <div style={{fontSize:12,fontWeight:600,color:"#fff"}}>{o.company||"—"}</div>
                 {o.title && <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:1}}>{o.title}</div>}
-                <div style={{display:"flex",gap:8,marginTop:4}}>
-                  {o.telegram && <span style={{fontSize:10,color:"#67E8F9"}}>{o.telegram}</span>}
-                  {o.interviewLink && <a href={o.interviewLink} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#FBBF24",textDecoration:"none"}}>🎬 интервью</a>}
-                </div>
+                {o.location && <div style={{fontSize:10,color:"rgba(255,255,255,0.3)",marginTop:1}}>📍 {o.location}</div>}
               </div>
-              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
-                <div>
-                  <div style={{fontSize:12,fontWeight:600,color:"#fff"}}>{o.company||"—"}</div>
-                  {o.otherOffers && <div style={{fontSize:10,color:"rgba(255,255,255,0.3)",marginTop:2}}>+ {o.otherOffers}</div>}
-                </div>
+
+              {/* Тариф */}
+              <div style={{padding:"10px 12px",display:"flex",alignItems:"center"}}>
+                <span style={{fontSize:11,color:"#A78BFA",background:"rgba(167,139,250,0.1)",border:"1px solid rgba(167,139,250,0.2)",padding:"2px 7px",borderRadius:20}}>{o.tariff||"—"}</span>
               </div>
-              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
-                <div>
-                  <span style={{fontSize:11,color:"#A78BFA",background:"rgba(167,139,250,0.1)",border:"1px solid rgba(167,139,250,0.2)",padding:"2px 7px",borderRadius:20}}>{o.tariff||"—"}</span>
-                  {o.duration && <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginTop:3}}>⏱ {o.duration}</div>}
-                </div>
-              </div>
-              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+
+              {/* Дата оффера */}
+              <div style={{padding:"10px 12px",display:"flex",alignItems:"center"}}>
                 <span style={{fontSize:12,color:o.offerDate?"#FBBF24":"rgba(255,255,255,0.25)"}}>{o.offerDate||"—"}</span>
               </div>
-              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+
+              {/* Выход на работу */}
+              <div style={{padding:"10px 12px",display:"flex",alignItems:"center"}}>
                 <span style={{fontSize:12,color:o.startWorkDate?"#34D399":"rgba(255,255,255,0.25)"}}>{o.startWorkDate||"—"}</span>
               </div>
-              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
-                <span style={{fontSize:12,fontWeight:700,color:salaryNum>150000?"#34D399":salaryNum>100000?"#FBBF24":salaryNum>0?"rgba(255,255,255,0.7)":"rgba(255,255,255,0.25)"}}>{o.salary||"—"}</span>
+
+              {/* Сумма */}
+              <div style={{padding:"10px 12px",display:"flex",alignItems:"center"}}>
+                <span style={{fontSize:12,fontWeight:700,color:o.salary?"#34D399":"rgba(255,255,255,0.25)"}}>{o.salary||"—"}</span>
               </div>
-              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
-                <span style={{fontSize:11,color:"rgba(255,255,255,0.45)"}}>{o.location||"—"}</span>
+
+              {/* Комментарий */}
+              <div style={{padding:"10px 12px",display:"flex",alignItems:"flex-start"}}>
+                <span style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>{o.comment||""}</span>
+              </div>
+
+              {/* Статус — быстрое переключение */}
+              <div style={{padding:"10px 8px",display:"flex",alignItems:"center"}}>
+                {canEdit ? (
+                  <select value={o.offerStatus||"Не указано"}
+                    onChange={function(e){quickStatus(o, e.target.value);}}
+                    style={{fontSize:10,fontWeight:700,color:stColor,background:stColor+"15",border:"1px solid "+stColor+"40",borderRadius:20,padding:"3px 6px",cursor:"pointer",outline:"none",fontFamily:"inherit",width:"100%"}}>
+                    {OFFER_STATUSES.map(function(s){return <option key={s} value={s}>{s}</option>;})}
+                  </select>
+                ) : (
+                  <span style={{fontSize:10,fontWeight:700,color:stColor,background:stColor+"15",border:"1px solid "+stColor+"40",borderRadius:20,padding:"3px 8px"}}>{o.offerStatus||"—"}</span>
+                )}
+              </div>
+
+              {/* Действия */}
+              <div style={{padding:"10px 6px",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                {canEdit && <>
+                  <button onClick={function(){startEdit(o);}} title="Редактировать" style={{fontSize:12,color:"rgba(255,255,255,0.3)",background:"none",border:"none",cursor:"pointer",padding:"2px"}}>✏️</button>
+                  <button onClick={function(){deleteOffer(o.id);}} title="Удалить" style={{fontSize:12,color:"rgba(248,113,113,0.4)",background:"none",border:"none",cursor:"pointer",padding:"2px"}}>✕</button>
+                </>}
               </div>
             </div>
           );
@@ -3683,11 +3817,12 @@ function OffersView({ currentUser }) {
       </div>
 
       <div style={{marginTop:8,fontSize:12,color:"rgba(255,255,255,0.25)",textAlign:"right"}}>
-        Показано: {filtered.length} из {offers.length}
+        Показано: {filtered.length} · Активных: {active.length} · Архив: {archived.length}
       </div>
     </div>
   );
 }
+
 
 function AnalyticsView({ currentUser }) {
   const [clients, setClients] = useState([]);
