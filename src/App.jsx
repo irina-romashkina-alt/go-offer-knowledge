@@ -2229,9 +2229,9 @@ async function sbDeleteClient(id) {
 // Accounts allowed to edit clients data
 const EDITORS = [
   "irina-romashkina@go-offer.us",
+  "alena.diuriagina@go-offer.us",
   "kseniya-belyntseva@go-offer.us",
   "aleksandra-sheider@go-offer.us",
-  "alena.diuriagina@go-offer.us",
 ];
 
 const ROLE_CONFIG = {
@@ -2306,7 +2306,7 @@ function ClientsView({ currentUser }) {
     status: "strategy", notes: "", mentor: "",
   });
 
-  useEffect(function() {
+  function loadClients() {
     sbLoadClients().then(function(data) {
       if (data) {
         setClients(data.clients);
@@ -2315,6 +2315,13 @@ function ClientsView({ currentUser }) {
       }
       setLoading(false);
     }).catch(function() { setLoading(false); });
+  }
+
+  useEffect(function() {
+    loadClients();
+    // Автообновление каждые 30 секунд
+    var interval = setInterval(loadClients, 30000);
+    return function() { clearInterval(interval); };
   }, []);
 
   useEffect(function() {
@@ -2632,6 +2639,10 @@ function ClientsView({ currentUser }) {
               + Добавить клиента
             </button>
           )}
+          <button onClick={function() { setLoading(true); loadClients(); }} title="Обновить данные"
+            style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 9, padding: "8px 12px", cursor: "pointer" }}>
+            🔄
+          </button>
         </div>
       </div>
 
@@ -2999,24 +3010,29 @@ function MentorView({ currentUser, isCurator }) {
   }
 
   useEffect(function() {
-    sbLoadClients().then(function(data) {
-      if (data) {
-        var myClients = isCurator
-          ? data.clients
-          : data.clients.filter(function(c) { return c.mentor === currentUser.name; });
-        setClients(myClients);
-        setAllClients(data.clients);
-      }
-      var saved = localStorage.getItem(storageKey());
-      if (saved) {
-        var p = JSON.parse(saved);
-        setChecks(p.checks || {});
-        setTldvData(p.tldv || {});
-        setExtraSlots(p.extra || {});
-        setNotes(p.notes || {});
-      }
-      setLoading(false);
-    }).catch(function() { setLoading(false); });
+    function load() {
+      sbLoadClients().then(function(data) {
+        if (data) {
+          var myClients = isCurator
+            ? data.clients
+            : data.clients.filter(function(c) { return c.mentor === currentUser.name; });
+          setClients(myClients);
+          setAllClients(data.clients);
+        }
+        var saved = localStorage.getItem(storageKey());
+        if (saved) {
+          var p = JSON.parse(saved);
+          setChecks(p.checks || {});
+          setTldvData(p.tldv || {});
+          setExtraSlots(p.extra || {});
+          setNotes(p.notes || {});
+        }
+        setLoading(false);
+      }).catch(function() { setLoading(false); });
+    }
+    load();
+    var interval = setInterval(load, 30000);
+    return function() { clearInterval(interval); };
   }, []);
 
   function toggleCheck(clientId, key, val) {
@@ -3433,17 +3449,21 @@ function AnalyticsView({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Фильтр периода
   var now = new Date();
   var firstOfYear = new Date(now.getFullYear(), 0, 1).toISOString().slice(0,10);
   const [dateFrom, setDateFrom] = useState(firstOfYear);
   const [dateTo, setDateTo] = useState(now.toISOString().slice(0,10));
 
   useEffect(function() {
-    sbLoadClients().then(function(data) {
-      if (data) setClients(data.clients);
-      setLoading(false);
-    }).catch(function() { setLoading(false); });
+    function load() {
+      sbLoadClients().then(function(data) {
+        if (data) setClients(data.clients);
+        setLoading(false);
+      }).catch(function() { setLoading(false); });
+    }
+    load();
+    var interval = setInterval(load, 60000); // аналитика — раз в минуту
+    return function() { clearInterval(interval); };
   }, []);
 
   if (loading) return (
@@ -3455,65 +3475,106 @@ function AnalyticsView({ currentUser }) {
 
   var all = clients;
   var active = clients.filter(function(c) { return !c.archived; });
-
-  // Клиенты за период (по дате старта)
-  var periodClients = all.filter(function(c) {
-    return c.startDate >= dateFrom && c.startDate <= dateTo;
-  });
-
-  // Офферы за период
   var offerStatuses = ["offer","offer_fee","done"];
-  var periodOffers = periodClients.filter(function(c) { return offerStatuses.includes(c.status); });
   var allOffers = all.filter(function(c) { return offerStatuses.includes(c.status); });
   var allRefunds = all.filter(function(c) { return ["refund","part_refund","offer_refund"].includes(c.status); });
-
-  // Конверсия
   var convRate = all.length ? Math.round(allOffers.length / all.length * 100) : 0;
+
+  // Период
+  var periodClients = all.filter(function(c) { return c.startDate >= dateFrom && c.startDate <= dateTo; });
+  var periodOffers = periodClients.filter(function(c) { return offerStatuses.includes(c.status); });
   var periodConv = periodClients.length ? Math.round(periodOffers.length / periodClients.length * 100) : 0;
 
-  // Финансы — Success Fee по тарифам
+  // SUCCESS FEE
   var SUCCESS_FEE = {
-    "take-all-plus": 0.05, "take-all-mocks": 0.04, "take-all-ass": 0.04,
-    "take-all-old": 0.04, "take-all-plus-old": 0.05, "take-all-ass-old": 0.04,
-    "custom-pack": 0.04, "strategy-only": 0, "vip": 0.06, "vip-old": 0.06,
-    "comeback-lite": 0.04, "mentorship-old": 0.04, "take-all": 0.04,
+    "take-all-plus":0.05,"take-all-mocks":0.04,"take-all-ass":0.04,
+    "take-all-old":0.04,"take-all-plus-old":0.05,"take-all-ass-old":0.04,
+    "custom-pack":0.04,"strategy-only":0,"vip":0.06,"vip-old":0.06,
+    "comeback-lite":0.04,"mentorship-old":0.04,"take-all":0.04,
   };
-  var AVG_SALARY = 120000; // средняя зп для расчёта
-  var successFeeTotal = allOffers.reduce(function(s, c) {
-    var pct = SUCCESS_FEE[c.tariff] || 0.04;
-    return s + Math.round(AVG_SALARY * pct);
-  }, 0);
+  var AVG_SALARY = 120000;
 
-  // Динамика по месяцам
-  var monthMap = {};
-  all.forEach(function(c) {
-    if (!c.startDate) return;
-    var m = c.startDate.slice(0,7); // YYYY-MM
-    if (!monthMap[m]) monthMap[m] = { new: 0, offers: 0 };
-    monthMap[m].new++;
-    if (offerStatuses.includes(c.status)) monthMap[m].offers++;
-  });
-  var months = Object.keys(monthMap).sort().slice(-12); // последние 12 месяцев
-  var monthData = months.map(function(m) { return Object.assign({ month: m }, monthMap[m]); });
-  var maxNew = Math.max.apply(null, monthData.map(function(d) { return d.new; })) || 1;
-  var monthNames = { "01":"Янв","02":"Фев","03":"Мар","04":"Апр","05":"Май","06":"Июн","07":"Июл","08":"Авг","09":"Сен","10":"Окт","11":"Ноя","12":"Дек" };
+  function calcSF(client) {
+    var salary = client.offerSalary || AVG_SALARY;
+    var pct = SUCCESS_FEE[client.tariff] || 0.04;
+    return Math.round(salary * pct);
+  }
+
+  var totalSF = allOffers.reduce(function(s,c){ return s + calcSF(c); }, 0);
+  var periodSF = periodOffers.reduce(function(s,c){ return s + calcSF(c); }, 0);
 
   // Воронка
   var funnelIds = ["strategy","resume","linkedin","automation","learning","rejections","screening","interviews","offer_nego","support"];
   var funnelCounts = funnelIds.map(function(id) {
     var st = STATUS_STAGES.find(function(s) { return s.id === id; });
-    return { id:id, label: st?st.label:id, icon: st?st.icon:"", color: st?st.color:"#fff", count: active.filter(function(c){return c.status===id;}).length };
+    return { id:id, label:st?st.label:id, icon:st?st.icon:"", color:st?st.color:"#fff",
+      count: active.filter(function(c){return c.status===id;}).length };
   });
+
+  // Конверсия интервью → оффер
+  var interviewClients = all.filter(function(c) { return c.status === "interviews" || offerStatuses.includes(c.status); });
+  var interviewToOffer = interviewClients.length ? Math.round(allOffers.length / interviewClients.length * 100) : 0;
+
+  // Время до оффера
+  function daysBetween(d1, d2) {
+    try { return Math.max(0, Math.round((new Date(d2) - new Date(d1)) / 86400000)); } catch(e) { return null; }
+  }
+  var offerWithDates = allOffers.filter(function(c) { return c.startDate && c.offerDate; });
+  var avgDaysToOffer = offerWithDates.length
+    ? Math.round(offerWithDates.reduce(function(s,c){ return s + daysBetween(c.startDate, c.offerDate); },0) / offerWithDates.length)
+    : null;
+
+  // Время до старта подач (до статуса "learning")
+  var learningClients = all.filter(function(c) { return c.week && parseInt(c.week) > 0; });
+  var avgWeekToApply = learningClients.length
+    ? Math.round(learningClients.reduce(function(s,c){ return s + (parseInt(c.week)||0); },0) / learningClients.length * 10) / 10
+    : null;
+
+  // Когортный анализ по кварталам
+  function getQuarter(dateStr) {
+    if (!dateStr) return null;
+    var d = new Date(dateStr);
+    var q = Math.floor(d.getMonth() / 3) + 1;
+    return d.getFullYear() + " Q" + q;
+  }
+  var cohortMap = {};
+  all.forEach(function(c) {
+    var q = getQuarter(c.startDate);
+    if (!q) return;
+    if (!cohortMap[q]) cohortMap[q] = { total:0, offers:0, refunds:0, sf:0 };
+    cohortMap[q].total++;
+    if (offerStatuses.includes(c.status)) { cohortMap[q].offers++; cohortMap[q].sf += calcSF(c); }
+    if (["refund","part_refund","offer_refund"].includes(c.status)) cohortMap[q].refunds++;
+  });
+  var cohorts = Object.keys(cohortMap).sort().map(function(q) {
+    var d = cohortMap[q];
+    return Object.assign({ quarter: q, conv: d.total ? Math.round(d.offers/d.total*100) : 0 }, d);
+  });
+
+  // Динамика по месяцам
+  var monthMap = {};
+  all.forEach(function(c) {
+    if (!c.startDate) return;
+    var m = c.startDate.slice(0,7);
+    if (!monthMap[m]) monthMap[m] = { new:0, offers:0 };
+    monthMap[m].new++;
+    if (offerStatuses.includes(c.status)) monthMap[m].offers++;
+  });
+  var months = Object.keys(monthMap).sort().slice(-12);
+  var monthData = months.map(function(m) { return Object.assign({ month:m }, monthMap[m]); });
+  var maxNew = Math.max.apply(null, monthData.map(function(d){return d.new;})) || 1;
+  var monthNames = {"01":"Янв","02":"Фев","03":"Мар","04":"Апр","05":"Май","06":"Июн","07":"Июл","08":"Авг","09":"Сен","10":"Окт","11":"Ноя","12":"Дек"};
 
   // Нагрузка кураторов
   var curatorStats = CURATORS.map(function(name) {
-    var mine = all.filter(function(c) { return c.curator === name; });
-    var myActive = mine.filter(function(c) { return !c.archived; });
-    var myOffers = mine.filter(function(c) { return offerStatuses.includes(c.status); });
-    return { name:name, total:mine.length, active:myActive.length, offers:myOffers.length, conv: mine.length ? Math.round(myOffers.length/mine.length*100) : 0 };
+    var mine = all.filter(function(c){return c.curator===name;});
+    var myOffers = mine.filter(function(c){return offerStatuses.includes(c.status);});
+    var mySF = myOffers.reduce(function(s,c){return s+calcSF(c);},0);
+    return { name:name, total:mine.length, active:mine.filter(function(c){return !c.archived;}).length,
+      offers:myOffers.length, conv:mine.length?Math.round(myOffers.length/mine.length*100):0, sf:mySF };
   }).filter(function(c){return c.total>0;});
 
-  // Нагрузка менторов
+  // Менторы
   var mentorNames = Array.from(new Set(all.map(function(c){return c.mentor;}).filter(Boolean)));
   var mentorStats = mentorNames.map(function(name) {
     var mine = all.filter(function(c){return c.mentor===name;});
@@ -3523,8 +3584,8 @@ function AnalyticsView({ currentUser }) {
   // Конверсия по тайтлам
   var titleMap = {};
   all.forEach(function(c) {
-    var t = (c.title||"Не указано").trim() || "Не указано";
-    if (!titleMap[t]) titleMap[t] = { total:0, offers:0 };
+    var t = (c.title||"Не указано").trim()||"Не указано";
+    if (!titleMap[t]) titleMap[t]={total:0,offers:0};
     titleMap[t].total++;
     if (offerStatuses.includes(c.status)) titleMap[t].offers++;
   });
@@ -3532,75 +3593,82 @@ function AnalyticsView({ currentUser }) {
     .map(function(e){return {title:e[0],total:e[1].total,offers:e[1].offers,conv:Math.round(e[1].offers/e[1].total*100)};})
     .sort(function(a,b){return b.offers-a.offers;}).slice(0,15);
 
-  // Тарифы
+  // По тарифам
   var tariffMap = {};
   all.forEach(function(c) {
     var t = TARIFF_LABELS[c.tariff]||c.tariff||"—";
-    if (!tariffMap[t]) tariffMap[t] = {total:0,active:0,offers:0};
+    if (!tariffMap[t]) tariffMap[t]={total:0,active:0,offers:0,sf:0};
     tariffMap[t].total++;
     if (!c.archived) tariffMap[t].active++;
-    if (offerStatuses.includes(c.status)) tariffMap[t].offers++;
+    if (offerStatuses.includes(c.status)) { tariffMap[t].offers++; tariffMap[t].sf+=calcSF(c); }
   });
-  var tariffStats = Object.entries(tariffMap).map(function(e){return {name:e[0],total:e[1].total,active:e[1].active,offers:e[1].offers,conv:e[1].total?Math.round(e[1].offers/e[1].total*100):0};}).sort(function(a,b){return b.total-a.total;});
+  var tariffStats = Object.entries(tariffMap)
+    .map(function(e){return {name:e[0],total:e[1].total,active:e[1].active,offers:e[1].offers,sf:e[1].sf,conv:e[1].total?Math.round(e[1].offers/e[1].total*100):0};})
+    .sort(function(a,b){return b.total-a.total;});
 
-  // Журнал офферов
+  // Журнал офферов за период
   var offerJournal = all.filter(function(c) {
-    var isOffer = offerStatuses.includes(c.status);
-    var inPeriod = c.startDate >= dateFrom && c.startDate <= dateTo;
-    return isOffer && inPeriod;
-  }).sort(function(a,b){return b.startDate>a.startDate?1:-1;});
+    return offerStatuses.includes(c.status) && c.startDate >= dateFrom && c.startDate <= dateTo;
+  }).sort(function(a,b){return a.startDate<b.startDate?1:-1;});
 
-  var cardStyle = { background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"18px 20px" };
-  var labelStyle = { fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.35)", textTransform:"uppercase", letterSpacing:"0.7px", marginBottom:8 };
+  var cardStyle = {background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:"18px 20px"};
+  var labelStyle = {fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:8};
 
   var TABS = [
-    { id:"overview",  label:"Обзор",    icon:"📊" },
-    { id:"dynamics",  label:"Динамика", icon:"📈" },
-    { id:"funnel",    label:"Воронка",  icon:"🔽" },
-    { id:"team",      label:"Команда",  icon:"👥" },
-    { id:"offers",    label:"Офферы",   icon:"🎉" },
-    { id:"finance",   label:"Финансы",  icon:"💰" },
-    { id:"titles",    label:"Тайтлы",   icon:"💼" },
-    { id:"tariffs",   label:"Тарифы",   icon:"💎" },
+    {id:"overview", label:"Обзор",    icon:"📊"},
+    {id:"cohorts",  label:"Когорты",  icon:"🗂"},
+    {id:"dynamics", label:"Динамика", icon:"📈"},
+    {id:"funnel",   label:"Воронка",  icon:"🔽"},
+    {id:"offers",   label:"Офферы",   icon:"🎉"},
+    {id:"finance",  label:"Финансы",  icon:"💰"},
+    {id:"team",     label:"Команда",  icon:"👥"},
+    {id:"titles",   label:"Тайтлы",   icon:"💼"},
+    {id:"tariffs",  label:"Тарифы",   icon:"💎"},
   ];
 
+  // Period shortcuts
+  function setPeriod(from) { setDateFrom(from); setDateTo(now.toISOString().slice(0,10)); }
+
   return (
-    <div style={{ maxWidth:1100, margin:"0 auto" }}>
-      <div style={{ marginBottom:20 }}>
-        <h1 style={{ fontSize:21, fontWeight:800, color:"#fff" }}>📊 Аналитика</h1>
-        <p style={{ color:"rgba(255,255,255,0.35)", fontSize:13, marginTop:3 }}>Данные по всем {all.length} клиентам</p>
+    <div style={{maxWidth:1100,margin:"0 auto"}}>
+      <div style={{marginBottom:20}}>
+        <h1 style={{fontSize:21,fontWeight:800,color:"#fff"}}>📊 Аналитика</h1>
+        <p style={{color:"rgba(255,255,255,0.35)",fontSize:13,marginTop:3}}>Данные по всем {all.length} клиентам</p>
       </div>
 
       {/* Фильтр периода */}
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16, flexWrap:"wrap" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.09)", borderRadius:10, padding:"8px 14px" }}>
-          <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)" }}>с</span>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:10,padding:"8px 14px"}}>
+          <span style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>с</span>
           <input type="date" value={dateFrom} onChange={function(e){setDateFrom(e.target.value);}}
-            style={{ background:"transparent", border:"none", color:"#fff", fontSize:13, fontWeight:600, outline:"none", fontFamily:"inherit", cursor:"pointer" }} />
-          <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)" }}>по</span>
+            style={{background:"transparent",border:"none",color:"#fff",fontSize:13,fontWeight:600,outline:"none",fontFamily:"inherit",cursor:"pointer"}} />
+          <span style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>по</span>
           <input type="date" value={dateTo} onChange={function(e){setDateTo(e.target.value);}}
-            style={{ background:"transparent", border:"none", color:"#fff", fontSize:13, fontWeight:600, outline:"none", fontFamily:"inherit", cursor:"pointer" }} />
+            style={{background:"transparent",border:"none",color:"#fff",fontSize:13,fontWeight:600,outline:"none",fontFamily:"inherit",cursor:"pointer"}} />
         </div>
         {[
-          { label:"Этот месяц", from: new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10) },
-          { label:"Квартал", from: new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1).toISOString().slice(0,10) },
-          { label:"Год", from: firstOfYear },
-          { label:"Всё время", from: "2020-01-01" },
-        ].map(function(p) {
-          return <button key={p.label} onClick={function(){setDateFrom(p.from);setDateTo(now.toISOString().slice(0,10));}}
-            style={{ fontSize:11, color:"rgba(255,255,255,0.5)", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, padding:"6px 12px", cursor:"pointer" }}>{p.label}</button>;
+          {label:"Месяц", from:new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10)},
+          {label:"Квартал", from:new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1).toISOString().slice(0,10)},
+          {label:"Год", from:firstOfYear},
+          {label:"Всё время", from:"2020-01-01"},
+        ].map(function(p){
+          return <button key={p.label} onClick={function(){setPeriod(p.from);}}
+            style={{fontSize:11,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>{p.label}</button>;
         })}
-        <div style={{ marginLeft:"auto", fontSize:12, color:"rgba(255,255,255,0.35)" }}>
-          За период: <span style={{ color:"#A78BFA", fontWeight:700 }}>{periodClients.length}</span> клиентов, <span style={{ color:"#34D399", fontWeight:700 }}>{periodOffers.length}</span> офферов
+        <div style={{marginLeft:"auto",fontSize:12,color:"rgba(255,255,255,0.35)"}}>
+          За период: <span style={{color:"#A78BFA",fontWeight:700}}>{periodClients.length}</span> клиентов · <span style={{color:"#34D399",fontWeight:700}}>{periodOffers.length}</span> офферов
         </div>
       </div>
 
       {/* Вкладки */}
-      <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
-        {TABS.map(function(tab) {
+      <div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
+        {TABS.map(function(tab){
           var isA = activeTab===tab.id;
           return <button key={tab.id} onClick={function(){setActiveTab(tab.id);}}
-            style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 14px", borderRadius:10, border:isA?"1px solid rgba(167,139,250,0.4)":"1px solid rgba(255,255,255,0.08)", background:isA?"rgba(167,139,250,0.12)":"rgba(255,255,255,0.03)", color:isA?"#A78BFA":"rgba(255,255,255,0.4)", fontWeight:isA?700:400, fontSize:12, cursor:"pointer" }}>
+            style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:10,
+              border:isA?"1px solid rgba(167,139,250,0.4)":"1px solid rgba(255,255,255,0.08)",
+              background:isA?"rgba(167,139,250,0.12)":"rgba(255,255,255,0.03)",
+              color:isA?"#A78BFA":"rgba(255,255,255,0.4)",fontWeight:isA?700:400,fontSize:12,cursor:"pointer"}}>
             {tab.icon} {tab.label}
           </button>;
         })}
@@ -3609,61 +3677,88 @@ function AnalyticsView({ currentUser }) {
       {/* ОБЗОР */}
       {activeTab==="overview" && (
         <div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:10, marginBottom:16 }}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
             {[
-              { label:"Всего", val:all.length, color:"#A78BFA", icon:"👥" },
-              { label:"Активных", val:active.length, color:"#34D399", icon:"🟢" },
-              { label:"За период", val:periodClients.length, color:"#67E8F9", icon:"📅" },
-              { label:"Офферов", val:allOffers.length, color:"#FBBF24", icon:"🎉" },
-              { label:"Рефандов", val:allRefunds.length, color:"#F87171", icon:"↩️" },
-              { label:"Конверсия", val:convRate+"%", color:"#34D399", icon:"📈" },
-            ].map(function(k) {
-              return <div key={k.label} style={{ background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:12, padding:"14px 16px" }}>
-                <div style={{ fontSize:18, marginBottom:5 }}>{k.icon}</div>
-                <div style={{ fontSize:22, fontWeight:900, color:k.color }}>{k.val}</div>
-                <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", marginTop:3 }}>{k.label}</div>
+              {label:"Всего клиентов", val:all.length, color:"#A78BFA", icon:"👥"},
+              {label:"Активных", val:active.length, color:"#34D399", icon:"🟢"},
+              {label:"Офферов (всего)", val:allOffers.length, color:"#FBBF24", icon:"🎉"},
+              {label:"Конверсия (всего)", val:convRate+"%", color:"#34D399", icon:"📈"},
+              {label:"Рефандов", val:allRefunds.length, color:"#F87171", icon:"↩️"},
+              {label:"Интервью → Оффер", val:interviewToOffer+"%", color:"#67E8F9", icon:"🎤"},
+            ].map(function(k){
+              return <div key={k.label} style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"16px 18px"}}>
+                <div style={{fontSize:20,marginBottom:6}}>{k.icon}</div>
+                <div style={{fontSize:26,fontWeight:900,color:k.color}}>{k.val}</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginTop:4}}>{k.label}</div>
               </div>;
             })}
           </div>
 
+          {/* Временные показатели */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+            <div style={cardStyle}>
+              <div style={labelStyle}>⏱ Среднее время до оффера</div>
+              {avgDaysToOffer
+                ? <><div style={{fontSize:32,fontWeight:900,color:"#FBBF24"}}>{avgDaysToOffer} <span style={{fontSize:14,color:"rgba(255,255,255,0.4)",fontWeight:400}}>дней</span></div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:4}}>по {offerWithDates.length} клиентам с датой оффера</div></>
+                : <div style={{fontSize:13,color:"rgba(255,255,255,0.25)"}}>Заполните дату оффера в карточках</div>}
+            </div>
+            <div style={cardStyle}>
+              <div style={labelStyle}>📅 Среднее до старта подач</div>
+              {avgWeekToApply
+                ? <><div style={{fontSize:32,fontWeight:900,color:"#67E8F9"}}>{avgWeekToApply} <span style={{fontSize:14,color:"rgba(255,255,255,0.4)",fontWeight:400}}>недель</span></div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:4}}>до активных подач</div></>
+                : <div style={{fontSize:13,color:"rgba(255,255,255,0.25)"}}>Нет данных</div>}
+            </div>
+            <div style={cardStyle}>
+              <div style={labelStyle}>💰 Расч. Success Fee</div>
+              <div style={{fontSize:32,fontWeight:900,color:"#FBBF24"}}>${totalSF.toLocaleString()}</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:4}}>по всем {allOffers.length} офферам</div>
+            </div>
+          </div>
+
           {/* Мини воронка */}
           <div style={cardStyle}>
-            <div style={labelStyle}>Воронка активных клиентов</div>
-            <div style={{ display:"flex", gap:4, alignItems:"center", flexWrap:"wrap" }}>
+            <div style={labelStyle}>Воронка активных</div>
+            <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
               {funnelCounts.filter(function(f){return f.count>0;}).map(function(f,i,arr){
-                return <div key={f.id} style={{ display:"flex", alignItems:"center", gap:4 }}>
-                  <div style={{ textAlign:"center", padding:"8px 10px", borderRadius:8, background:f.color+"12", border:"1px solid "+f.color+"30" }}>
-                    <div style={{ fontSize:16, fontWeight:900, color:f.color }}>{f.count}</div>
-                    <div style={{ fontSize:9, color:"rgba(255,255,255,0.4)", marginTop:2, maxWidth:65, lineHeight:1.2 }}>{f.label}</div>
+                return <div key={f.id} style={{display:"flex",alignItems:"center",gap:4}}>
+                  <div style={{textAlign:"center",padding:"8px 10px",borderRadius:8,background:f.color+"12",border:"1px solid "+f.color+"30"}}>
+                    <div style={{fontSize:16,fontWeight:900,color:f.color}}>{f.count}</div>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",marginTop:2,maxWidth:65,lineHeight:1.2}}>{f.label}</div>
                   </div>
-                  {i<arr.length-1 && <span style={{ color:"rgba(255,255,255,0.15)", fontSize:14 }}>›</span>}
+                  {i<arr.length-1 && <span style={{color:"rgba(255,255,255,0.15)",fontSize:14}}>›</span>}
                 </div>;
               })}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* За период */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:12 }}>
-            <div style={cardStyle}>
-              <div style={labelStyle}>За выбранный период</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {[
-                  { label:"Новых клиентов", val:periodClients.length, color:"#A78BFA" },
-                  { label:"Офферов", val:periodOffers.length, color:"#FBBF24" },
-                  { label:"Конверсия периода", val:periodConv+"%", color:"#34D399" },
-                ].map(function(r){
-                  return <div key={r.label} style={{ display:"flex", justifyContent:"space-between" }}>
-                    <span style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>{r.label}</span>
-                    <span style={{ fontSize:13, fontWeight:700, color:r.color }}>{r.val}</span>
-                  </div>;
-                })}
-              </div>
+      {/* КОГОРТЫ */}
+      {activeTab==="cohorts" && (
+        <div style={cardStyle}>
+          <div style={labelStyle}>Когортный анализ по кварталам</div>
+          <div style={{marginTop:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 80px 80px 80px 80px 100px 100px",gap:8,padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)",marginBottom:4}}>
+              {["Квартал","Клиентов","Офферов","Рефандов","Конверсия","Success Fee","PnL"].map(function(h){
+                return <div key={h} style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase"}}>{h}</div>;
+              })}
             </div>
-            <div style={cardStyle}>
-              <div style={labelStyle}>Финансы (Success Fee)</div>
-              <div style={{ fontSize:32, fontWeight:900, color:"#FBBF24" }}>${successFeeTotal.toLocaleString()}</div>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.35)", marginTop:4 }}>расчётный Success Fee по всем офферам</div>
-              <div style={{ fontSize:11, color:"rgba(255,255,255,0.25)", marginTop:6 }}>* на основе ср. зп $120k и % тарифа</div>
+            {cohorts.map(function(c,i){
+              var pnl = c.sf - (c.refunds * 1600);
+              return <div key={c.quarter} style={{display:"grid",gridTemplateColumns:"1fr 80px 80px 80px 80px 100px 100px",gap:8,padding:"11px 12px",borderBottom:i<cohorts.length-1?"1px solid rgba(255,255,255,0.04)":"none",background:i%2===0?"transparent":"rgba(255,255,255,0.01)"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#A78BFA"}}>{c.quarter}</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,0.6)"}}>{c.total}</div>
+                <div style={{fontSize:13,fontWeight:600,color:"#FBBF24"}}>{c.offers}</div>
+                <div style={{fontSize:13,color:"#F87171"}}>{c.refunds}</div>
+                <div style={{fontSize:13,fontWeight:700,color:c.conv>30?"#34D399":c.conv>15?"#FBBF24":"#F87171"}}>{c.conv}%</div>
+                <div style={{fontSize:13,color:"#34D399",fontWeight:600}}>${c.sf.toLocaleString()}</div>
+                <div style={{fontSize:13,fontWeight:700,color:pnl>0?"#34D399":"#F87171"}}>${pnl.toLocaleString()}</div>
+              </div>;
+            })}
+            <div style={{padding:"12px",borderTop:"1px solid rgba(255,255,255,0.06)",background:"rgba(167,139,250,0.05)"}}>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.3)"}}>* PnL = Success Fee − (рефанды × $1600 возврат). Приблизительный расчёт.</div>
             </div>
           </div>
         </div>
@@ -3672,37 +3767,31 @@ function AnalyticsView({ currentUser }) {
       {/* ДИНАМИКА */}
       {activeTab==="dynamics" && (
         <div style={cardStyle}>
-          <div style={labelStyle}>Новые клиенты и офферы по месяцам (последние 12)</div>
-          <div style={{ marginTop:16 }}>
-            {monthData.length === 0 ? (
-              <div style={{ color:"rgba(255,255,255,0.25)", fontSize:13 }}>Нет данных</div>
-            ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                {monthData.map(function(d) {
-                  var pctNew = Math.round(d.new/maxNew*100);
-                  var label = monthNames[d.month.slice(5,7)] + " " + d.month.slice(0,4);
-                  return (
-                    <div key={d.month}>
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                        <span style={{ fontSize:12, color:"rgba(255,255,255,0.6)", fontWeight:600 }}>{label}</span>
-                        <div style={{ display:"flex", gap:12 }}>
-                          <span style={{ fontSize:12, color:"#A78BFA" }}>+{d.new} клиентов</span>
-                          {d.offers>0 && <span style={{ fontSize:12, color:"#FBBF24" }}>🎉 {d.offers} офферов</span>}
-                        </div>
-                      </div>
-                      <div style={{ height:10, background:"rgba(255,255,255,0.05)", borderRadius:99, position:"relative", overflow:"hidden" }}>
-                        <div style={{ position:"absolute", left:0, height:"100%", width:pctNew+"%", background:"#A78BFA", borderRadius:99, transition:"width 0.4s" }} />
-                        {d.offers>0 && <div style={{ position:"absolute", left:0, height:"100%", width:Math.round(d.offers/maxNew*100)+"%", background:"#FBBF24", opacity:0.7, borderRadius:99 }} />}
-                      </div>
+          <div style={labelStyle}>Новые клиенты и офферы по месяцам</div>
+          <div style={{marginTop:16,display:"flex",flexDirection:"column",gap:10}}>
+            {monthData.map(function(d){
+              var pctNew = Math.round(d.new/maxNew*100);
+              var label = monthNames[d.month.slice(5,7)] + " " + d.month.slice(0,4);
+              return (
+                <div key={d.month}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                    <span style={{fontSize:12,color:"rgba(255,255,255,0.6)",fontWeight:600}}>{label}</span>
+                    <div style={{display:"flex",gap:14}}>
+                      <span style={{fontSize:12,color:"#A78BFA"}}>+{d.new}</span>
+                      {d.offers>0 && <span style={{fontSize:12,color:"#FBBF24"}}>🎉 {d.offers}</span>}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-            <div style={{ display:"flex", gap:14, marginTop:16 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:12,height:12,borderRadius:3,background:"#A78BFA" }}/><span style={{ fontSize:11,color:"rgba(255,255,255,0.4)" }}>Новые клиенты</span></div>
-              <div style={{ display:"flex", alignItems:"center", gap:6 }}><div style={{ width:12,height:12,borderRadius:3,background:"#FBBF24" }}/><span style={{ fontSize:11,color:"rgba(255,255,255,0.4)" }}>Офферы</span></div>
-            </div>
+                  </div>
+                  <div style={{height:10,background:"rgba(255,255,255,0.05)",borderRadius:99,position:"relative",overflow:"hidden"}}>
+                    <div style={{position:"absolute",left:0,height:"100%",width:pctNew+"%",background:"#A78BFA",borderRadius:99}} />
+                    {d.offers>0 && <div style={{position:"absolute",left:0,height:"100%",width:Math.round(d.offers/maxNew*100)+"%",background:"#FBBF24",opacity:0.7,borderRadius:99}} />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{display:"flex",gap:14,marginTop:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:12,height:12,borderRadius:3,background:"#A78BFA"}}/><span style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>Новые клиенты</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:12,height:12,borderRadius:3,background:"#FBBF24"}}/><span style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>Офферы</span></div>
           </div>
         </div>
       )}
@@ -3712,21 +3801,21 @@ function AnalyticsView({ currentUser }) {
         <div>
           <div style={cardStyle}>
             <div style={labelStyle}>Детальная воронка — активные клиенты</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:8 }}>
-              {funnelCounts.map(function(f,i) {
+            <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:8}}>
+              {funnelCounts.map(function(f,i){
                 var maxC = Math.max.apply(null,funnelCounts.map(function(fc){return fc.count;})) || 1;
                 var pct = Math.round(f.count/maxC*100);
                 var convFromFirst = funnelCounts[0].count ? Math.round(f.count/funnelCounts[0].count*100) : 0;
                 return (
-                  <div key={f.id} style={{ display:"flex", alignItems:"center", gap:12 }}>
-                    <div style={{ width:130, fontSize:12, color:"rgba(255,255,255,0.6)", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
-                      <span style={{ fontSize:14 }}>{f.icon}</span><span>{f.label}</span>
+                  <div key={f.id} style={{display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{width:130,fontSize:12,color:"rgba(255,255,255,0.6)",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                      <span style={{fontSize:14}}>{f.icon}</span><span>{f.label}</span>
                     </div>
-                    <div style={{ flex:1, height:26, background:"rgba(255,255,255,0.04)", borderRadius:6, position:"relative", overflow:"hidden" }}>
-                      <div style={{ position:"absolute", left:0, top:0, height:"100%", width:pct+"%", background:f.color+"40", borderRadius:6 }} />
-                      <div style={{ position:"absolute", left:8, top:5, fontSize:12, fontWeight:700, color:f.color }}>{f.count}</div>
+                    <div style={{flex:1,height:26,background:"rgba(255,255,255,0.04)",borderRadius:6,position:"relative",overflow:"hidden"}}>
+                      <div style={{position:"absolute",left:0,top:0,height:"100%",width:pct+"%",background:f.color+"40",borderRadius:6}} />
+                      <div style={{position:"absolute",left:8,top:5,fontSize:12,fontWeight:700,color:f.color}}>{f.count}</div>
                     </div>
-                    <div style={{ width:50, textAlign:"right", fontSize:12, color:"rgba(255,255,255,0.35)" }}>{i===0?"100%":convFromFirst+"%"}</div>
+                    <div style={{width:50,textAlign:"right",fontSize:12,color:"rgba(255,255,255,0.35)"}}>{i===0?"100%":convFromFirst+"%"}</div>
                   </div>
                 );
               })}
@@ -3734,13 +3823,99 @@ function AnalyticsView({ currentUser }) {
           </div>
           <div style={Object.assign({},cardStyle,{marginTop:12})}>
             <div style={labelStyle}>Конверсия между этапами</div>
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:8 }}>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
               {funnelCounts.slice(0,-1).map(function(f,i){
                 var next = funnelCounts[i+1];
                 var conv = f.count ? Math.round(next.count/f.count*100) : 0;
-                return <div key={f.id} style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10, padding:"10px 14px", textAlign:"center", minWidth:100 }}>
-                  <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginBottom:4 }}>{f.label} → {next.label}</div>
-                  <div style={{ fontSize:18, fontWeight:900, color:conv>50?"#34D399":conv>25?"#FBBF24":"#F87171" }}>{conv}%</div>
+                return <div key={f.id} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,padding:"10px 14px",textAlign:"center",minWidth:100}}>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{f.label} → {next.label}</div>
+                  <div style={{fontSize:18,fontWeight:900,color:conv>50?"#34D399":conv>25?"#FBBF24":"#F87171"}}>{conv}%</div>
+                </div>;
+              })}
+            </div>
+          </div>
+          {/* Интервью → Оффер */}
+          <div style={Object.assign({},cardStyle,{marginTop:12})}>
+            <div style={labelStyle}>Ключевые конверсии</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginTop:8}}>
+              {[
+                {label:"Все клиенты → Оффер", val:convRate+"%", color:"#FBBF24"},
+                {label:"Интервью → Оффер", val:interviewToOffer+"%", color:"#34D399"},
+                {label:"Оффер-рефанды", val:allRefunds.length+" ("+Math.round(allRefunds.length/all.length*100)+"%)", color:"#F87171"},
+              ].map(function(k){
+                return <div key={k.label} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+                  <div style={{fontSize:22,fontWeight:900,color:k.color}}>{k.val}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:6}}>{k.label}</div>
+                </div>;
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ОФФЕРЫ */}
+      {activeTab==="offers" && (
+        <div style={cardStyle}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div style={labelStyle}>Журнал офферов за период ({offerJournal.length})</div>
+            <div style={{display:"flex",gap:10"}}>
+              <span style={{fontSize:12,color:"#FBBF24",fontWeight:700}}>SF: ${periodSF.toLocaleString()}</span>
+            </div>
+          </div>
+          {offerJournal.length===0
+            ? <div style={{color:"rgba(255,255,255,0.25)",fontSize:13,textAlign:"center",padding:"30px 0"}}>Нет офферов за выбранный период</div>
+            : <div>
+                <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 80px",gap:8,padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)",marginBottom:4}}>
+                  {["Имя / Должность","Тариф","Куратор","Ментор","SF"].map(function(h){
+                    return <div key={h} style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase"}}>{h}</div>;
+                  })}
+                </div>
+                {offerJournal.map(function(c,i){
+                  var sf = calcSF(c);
+                  return <div key={c.id} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 80px",gap:8,padding:"10px 12px",borderBottom:i<offerJournal.length-1?"1px solid rgba(255,255,255,0.04)":"none",background:i%2===0?"transparent":"rgba(255,255,255,0.01)"}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600,color:"#fff"}}>{c.name}</div>
+                      {c.title && <div style={{fontSize:11,color:"rgba(255,255,255,0.35)"}}>{c.title}</div>}
+                      <div style={{fontSize:10,color:"rgba(255,255,255,0.25)"}}>{c.startDate}</div>
+                    </div>
+                    <div style={{fontSize:11,color:"#A78BFA",display:"flex",alignItems:"center"}}>{TARIFF_LABELS[c.tariff]||c.tariff}</div>
+                    <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",display:"flex",alignItems:"center"}}>{(c.curator||"").split(" ")[0]}</div>
+                    <div style={{fontSize:12,color:"#F472B6",display:"flex",alignItems:"center"}}>{c.mentor?c.mentor.split(" ")[0]:"—"}</div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#FBBF24",display:"flex",alignItems:"center"}}>${sf.toLocaleString()}</div>
+                  </div>;
+                })}
+              </div>
+          }
+        </div>
+      )}
+
+      {/* ФИНАНСЫ */}
+      {activeTab==="finance" && (
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+            {[
+              {label:"Success Fee (всего)", val:"$"+totalSF.toLocaleString(), color:"#FBBF24", icon:"💰", sub:"по "+allOffers.length+" офферам"},
+              {label:"SF за период", val:"$"+periodSF.toLocaleString(), color:"#34D399", icon:"📅", sub:periodOffers.length+" офферов"},
+              {label:"Рефандов (потери)", val:allRefunds.length, color:"#F87171", icon:"↩️", sub:"~$"+(allRefunds.length*1600).toLocaleString()+" возврат"},
+            ].map(function(k){
+              return <div key={k.label} style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:"18px 20px"}}>
+                <div style={{fontSize:22,marginBottom:8}}>{k.icon}</div>
+                <div style={{fontSize:26,fontWeight:900,color:k.color}}>{k.val}</div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,0.4)",marginTop:4}}>{k.label}</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.2)",marginTop:2}}>{k.sub}</div>
+              </div>;
+            })}
+          </div>
+          <div style={cardStyle}>
+            <div style={labelStyle}>Success Fee по тарифам</div>
+            <div style={{marginTop:8}}>
+              {tariffStats.filter(function(t){return t.offers>0;}).map(function(t,i){
+                var pct = SUCCESS_FEE[Object.keys(TARIFF_LABELS).find(function(k){return TARIFF_LABELS[k]===t.name;}) || ""] || 0.04;
+                return <div key={t.name} style={{display:"grid",gridTemplateColumns:"2fr 80px 80px 100px",gap:8,padding:"9px 12px",borderBottom:i<tariffStats.length-1?"1px solid rgba(255,255,255,0.04)":"none"}}>
+                  <div style={{fontSize:13,color:"rgba(255,255,255,0.75)"}}>{t.name}</div>
+                  <div style={{fontSize:13,color:"rgba(255,255,255,0.5)"}}>{t.offers} офф.</div>
+                  <div style={{fontSize:13,color:"#A78BFA",fontWeight:700}}>{Math.round(pct*100)}%</div>
+                  <div style={{fontSize:13,color:"#FBBF24",fontWeight:700}}>${t.sf.toLocaleString()}</div>
                 </div>;
               })}
             </div>
@@ -3750,17 +3925,17 @@ function AnalyticsView({ currentUser }) {
 
       {/* КОМАНДА */}
       {activeTab==="team" && (
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div style={cardStyle}>
             <div style={labelStyle}>Кураторы</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:10, marginTop:8 }}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10,marginTop:8}}>
               {curatorStats.map(function(c){
-                return <div key={c.name} style={{ background:"rgba(167,139,250,0.06)", border:"1px solid rgba(167,139,250,0.15)", borderRadius:12, padding:"14px 16px" }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#A78BFA", marginBottom:10 }}>🎓 {c.name.split(" ")[0]}</div>
-                  {[{l:"Всего",v:c.total,c:"rgba(255,255,255,0.6)"},{l:"Активных",v:c.active,c:"#34D399"},{l:"Офферов",v:c.offers,c:"#FBBF24"},{l:"Конверсия",v:c.conv+"%",c:"#67E8F9"}].map(function(r){
-                    return <div key={r.l} style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
-                      <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)" }}>{r.l}</span>
-                      <span style={{ fontSize:12, fontWeight:700, color:r.c }}>{r.v}</span>
+                return <div key={c.name} style={{background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.15)",borderRadius:12,padding:"14px 16px"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#A78BFA",marginBottom:10}}>🎓 {c.name.split(" ")[0]}</div>
+                  {[{l:"Всего",v:c.total,c:"rgba(255,255,255,0.6)"},{l:"Активных",v:c.active,c:"#34D399"},{l:"Офферов",v:c.offers,c:"#FBBF24"},{l:"Конверсия",v:c.conv+"%",c:"#67E8F9"},{l:"SF",v:"$"+c.sf.toLocaleString(),c:"#FBBF24"}].map(function(r){
+                    return <div key={r.l} style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                      <span style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>{r.l}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:r.c}}>{r.v}</span>
                     </div>;
                   })}
                 </div>;
@@ -3770,18 +3945,12 @@ function AnalyticsView({ currentUser }) {
           {mentorStats.length>0 && (
             <div style={cardStyle}>
               <div style={labelStyle}>Менторы</div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:10, marginTop:8 }}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginTop:8}}>
                 {mentorStats.map(function(m){
-                  return <div key={m.name} style={{ background:"rgba(244,114,182,0.06)", border:"1px solid rgba(244,114,182,0.15)", borderRadius:12, padding:"14px 16px" }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:"#F472B6", marginBottom:8 }}>🧠 {m.name.split(" ")[0]}</div>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
-                      <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)" }}>Всего</span>
-                      <span style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,0.6)" }}>{m.total}</span>
-                    </div>
-                    <div style={{ display:"flex", justifyContent:"space-between" }}>
-                      <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)" }}>Активных</span>
-                      <span style={{ fontSize:12, fontWeight:700, color:"#34D399" }}>{m.active}</span>
-                    </div>
+                  return <div key={m.name} style={{background:"rgba(244,114,182,0.06)",border:"1px solid rgba(244,114,182,0.15)",borderRadius:12,padding:"14px 16px"}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"#F472B6",marginBottom:8}}>🧠 {m.name.split(" ")[0]}</div>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>Всего</span><span style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.6)"}}>{m.total}</span></div>
+                    <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>Активных</span><span style={{fontSize:12,fontWeight:700,color:"#34D399"}}>{m.active}</span></div>
                   </div>;
                 })}
               </div>
@@ -3790,96 +3959,20 @@ function AnalyticsView({ currentUser }) {
         </div>
       )}
 
-      {/* ЖУРНАЛ ОФФЕРОВ */}
-      {activeTab==="offers" && (
-        <div style={cardStyle}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-            <div style={labelStyle}>Журнал офферов за период ({offerJournal.length})</div>
-          </div>
-          {offerJournal.length===0 ? (
-            <div style={{ color:"rgba(255,255,255,0.25)", fontSize:13, textAlign:"center", padding:"30px 0" }}>Нет офферов за выбранный период</div>
-          ) : (
-            <div>
-              <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr", gap:8, padding:"8px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", marginBottom:4 }}>
-                {["Имя / Должность","Тариф","Куратор","Ментор","Старт"].map(function(h){
-                  return <div key={h} style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.35)", textTransform:"uppercase" }}>{h}</div>;
-                })}
-              </div>
-              {offerJournal.map(function(c,i){
-                var st = STATUS_STAGES.find(function(s){return s.id===c.status;});
-                return <div key={c.id} style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr", gap:8, padding:"10px 12px", borderBottom:i<offerJournal.length-1?"1px solid rgba(255,255,255,0.04)":"none", background:i%2===0?"transparent":"rgba(255,255,255,0.01)" }}>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:600, color:"#fff" }}>{c.name}</div>
-                    {c.title && <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)" }}>{c.title}</div>}
-                  </div>
-                  <div style={{ fontSize:11, color:"#A78BFA", display:"flex", alignItems:"center" }}>{TARIFF_LABELS[c.tariff]||c.tariff}</div>
-                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", display:"flex", alignItems:"center" }}>{(c.curator||"").split(" ")[0]}</div>
-                  <div style={{ fontSize:12, color:"#F472B6", display:"flex", alignItems:"center" }}>{c.mentor ? c.mentor.split(" ")[0] : "—"}</div>
-                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", display:"flex", alignItems:"center" }}>{c.startDate}</div>
-                </div>;
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ФИНАНСЫ */}
-      {activeTab==="finance" && (
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
-            {[
-              { label:"Расч. Success Fee (всего)", val:"$"+successFeeTotal.toLocaleString(), color:"#FBBF24", icon:"💰", sub:"по всем "+allOffers.length+" офферам" },
-              { label:"Средний SF на оффер", val:"$"+Math.round(successFeeTotal/(allOffers.length||1)).toLocaleString(), color:"#34D399", icon:"📊", sub:"на базе ср. зп $120k" },
-              { label:"Рефандов", val:allRefunds.length, color:"#F87171", icon:"↩️", sub:"потеря клиентов" },
-            ].map(function(k){
-              return <div key={k.label} style={{ background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"18px 20px" }}>
-                <div style={{ fontSize:22, marginBottom:8 }}>{k.icon}</div>
-                <div style={{ fontSize:26, fontWeight:900, color:k.color }}>{k.val}</div>
-                <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>{k.label}</div>
-                <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)", marginTop:2 }}>{k.sub}</div>
-              </div>;
-            })}
-          </div>
-
-          {/* SF по тарифам */}
-          <div style={cardStyle}>
-            <div style={labelStyle}>Success Fee по тарифам</div>
-            <div style={{ marginTop:8 }}>
-              <div style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 100px", gap:8, padding:"8px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", marginBottom:4 }}>
-                {["Тариф","Офферов","% SF","Расч. сумма"].map(function(h){return <div key={h} style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.35)", textTransform:"uppercase" }}>{h}</div>;})}
-              </div>
-              {Object.entries(TARIFF_LABELS).map(function(entry) {
-                var key = entry[0]; var name = entry[1];
-                var cnt = allOffers.filter(function(c){return c.tariff===key;}).length;
-                if (!cnt) return null;
-                var pct = SUCCESS_FEE[key] || 0.04;
-                var total = cnt * Math.round(120000 * pct);
-                return <div key={key} style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 100px", gap:8, padding:"8px 12px", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
-                  <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)" }}>{name}</div>
-                  <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>{cnt}</div>
-                  <div style={{ fontSize:13, color:"#A78BFA", fontWeight:700 }}>{Math.round(pct*100)}%</div>
-                  <div style={{ fontSize:13, color:"#FBBF24", fontWeight:700 }}>${total.toLocaleString()}</div>
-                </div>;
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ПО ТАЙТЛАМ */}
       {activeTab==="titles" && (
         <div style={cardStyle}>
           <div style={labelStyle}>Конверсия по должностям (мин. 2 клиента)</div>
-          <div style={{ marginTop:8 }}>
-            <div style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 80px", gap:8, padding:"8px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", marginBottom:4 }}>
-              {["Должность","Всего","Офферов","Конверсия"].map(function(h){return <div key={h} style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.35)", textTransform:"uppercase" }}>{h}</div>;})}
+          <div style={{marginTop:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"2fr 80px 80px 80px",gap:8,padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)",marginBottom:4}}>
+              {["Должность","Всего","Офферов","Конверсия"].map(function(h){return <div key={h} style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase"}}>{h}</div>;})}
             </div>
             {titleStats.map(function(t,i){
-              return <div key={t.title} style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 80px", gap:8, padding:"9px 12px", borderBottom:i<titleStats.length-1?"1px solid rgba(255,255,255,0.04)":"none", background:i%2===0?"transparent":"rgba(255,255,255,0.01)" }}>
-                <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)" }}>{t.title}</div>
-                <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>{t.total}</div>
-                <div style={{ fontSize:13, fontWeight:600, color:t.offers>0?"#FBBF24":"rgba(255,255,255,0.25)" }}>{t.offers}</div>
-                <div style={{ fontSize:13, fontWeight:700, color:t.conv>30?"#34D399":t.conv>10?"#FBBF24":"#F87171" }}>{t.conv}%</div>
+              return <div key={t.title} style={{display:"grid",gridTemplateColumns:"2fr 80px 80px 80px",gap:8,padding:"9px 12px",borderBottom:i<titleStats.length-1?"1px solid rgba(255,255,255,0.04)":"none",background:i%2===0?"transparent":"rgba(255,255,255,0.01)"}}>
+                <div style={{fontSize:13,color:"rgba(255,255,255,0.75)"}}>{t.title}</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,0.5)"}}>{t.total}</div>
+                <div style={{fontSize:13,fontWeight:600,color:t.offers>0?"#FBBF24":"rgba(255,255,255,0.25)"}}>{t.offers}</div>
+                <div style={{fontSize:13,fontWeight:700,color:t.conv>30?"#34D399":t.conv>10?"#FBBF24":"#F87171"}}>{t.conv}%</div>
               </div>;
             })}
           </div>
@@ -3890,17 +3983,18 @@ function AnalyticsView({ currentUser }) {
       {activeTab==="tariffs" && (
         <div style={cardStyle}>
           <div style={labelStyle}>Статистика по тарифам</div>
-          <div style={{ marginTop:8 }}>
-            <div style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 80px 80px", gap:8, padding:"8px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", marginBottom:4 }}>
-              {["Тариф","Всего","Активных","Офферов","Конверсия"].map(function(h){return <div key={h} style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.35)", textTransform:"uppercase" }}>{h}</div>;})}
+          <div style={{marginTop:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"2fr 80px 80px 80px 80px 100px",gap:8,padding:"8px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)",marginBottom:4}}>
+              {["Тариф","Всего","Активных","Офферов","Конверсия","SF"].map(function(h){return <div key={h} style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",textTransform:"uppercase"}}>{h}</div>;})}
             </div>
             {tariffStats.map(function(t,i){
-              return <div key={t.name} style={{ display:"grid", gridTemplateColumns:"2fr 80px 80px 80px 80px", gap:8, padding:"9px 12px", borderBottom:i<tariffStats.length-1?"1px solid rgba(255,255,255,0.04)":"none", background:i%2===0?"transparent":"rgba(255,255,255,0.01)" }}>
-                <div style={{ fontSize:13, color:"rgba(255,255,255,0.75)", fontWeight:600 }}>{t.name}</div>
-                <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)" }}>{t.total}</div>
-                <div style={{ fontSize:13, color:"#34D399", fontWeight:600 }}>{t.active}</div>
-                <div style={{ fontSize:13, color:t.offers>0?"#FBBF24":"rgba(255,255,255,0.25)", fontWeight:600 }}>{t.offers}</div>
-                <div style={{ fontSize:13, fontWeight:700, color:t.conv>30?"#34D399":t.conv>10?"#FBBF24":"rgba(255,255,255,0.4)" }}>{t.conv}%</div>
+              return <div key={t.name} style={{display:"grid",gridTemplateColumns:"2fr 80px 80px 80px 80px 100px",gap:8,padding:"9px 12px",borderBottom:i<tariffStats.length-1?"1px solid rgba(255,255,255,0.04)":"none",background:i%2===0?"transparent":"rgba(255,255,255,0.01)"}}>
+                <div style={{fontSize:13,color:"rgba(255,255,255,0.75)",fontWeight:600}}>{t.name}</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,0.5)"}}>{t.total}</div>
+                <div style={{fontSize:13,color:"#34D399",fontWeight:600}}>{t.active}</div>
+                <div style={{fontSize:13,color:t.offers>0?"#FBBF24":"rgba(255,255,255,0.25)",fontWeight:600}}>{t.offers}</div>
+                <div style={{fontSize:13,fontWeight:700,color:t.conv>30?"#34D399":t.conv>10?"#FBBF24":"rgba(255,255,255,0.4)"}}>{t.conv}%</div>
+                <div style={{fontSize:13,color:"#FBBF24",fontWeight:600}}>{t.sf>0?"$"+t.sf.toLocaleString():"—"}</div>
               </div>;
             })}
           </div>
@@ -3909,6 +4003,7 @@ function AnalyticsView({ currentUser }) {
     </div>
   );
 }
+
 // ============================================================
 // 19. SALES И МАРКЕТИНГ
 // ============================================================
