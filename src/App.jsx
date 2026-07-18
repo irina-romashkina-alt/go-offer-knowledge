@@ -3858,7 +3858,7 @@ function AnalyticsView({ currentUser }) {
         <div style={cardStyle}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <div style={labelStyle}>Журнал офферов за период ({offerJournal.length})</div>
-            <div style={{display:"flex",gap:10"}}>
+            <div style={{display:"flex",gap:10}}>
               <span style={{fontSize:12,color:"#FBBF24",fontWeight:700}}>SF: ${periodSF.toLocaleString()}</span>
             </div>
           </div>
