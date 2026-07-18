@@ -2205,9 +2205,15 @@ async function sbSaveClient(client, checkedMap, commentsMap) {
   Object.keys(checkedMap).forEach(function(k) { if (k.startsWith(client.id + "_")) clientChecked[k] = checkedMap[k]; });
   Object.keys(commentsMap).forEach(function(k) { if (k.startsWith(client.id + "_")) clientComments[k] = commentsMap[k]; });
   await sbFetch("clients?id=eq." + encodeURIComponent(client.id), {
-    method: "PUT",
+    method: "PATCH",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY,
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal",
+    },
     body: JSON.stringify({
-      id: client.id, name: client.name, tariff: client.tariff,
+      name: client.name, tariff: client.tariff,
       curator: client.curator, status: client.status,
       start_date: client.startDate, notes: client.notes || "",
       checked_map: clientChecked, comments_map: clientComments,
@@ -2326,7 +2332,7 @@ function ClientsView({ currentUser }) {
   useEffect(function() {
     loadClients();
     // Автообновление каждые 30 секунд
-    var interval = setInterval(loadClients, 30000);
+    var interval = setInterval(loadClients, 15000);
     return function() { clearInterval(interval); };
   }, []);
 
@@ -3067,7 +3073,7 @@ function MentorView({ currentUser, isCurator }) {
       }).catch(function() { setLoading(false); });
     }
     load();
-    var interval = setInterval(load, 30000);
+    var interval = setInterval(load, 15000);
     return function() { clearInterval(interval); };
   }, []);
 
