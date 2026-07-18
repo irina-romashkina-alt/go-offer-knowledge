@@ -2195,7 +2195,7 @@ async function sbLoadClients() {
   var clients = rows.map(function(r) {
     Object.assign(checkedMap, r.checked_map || {});
     Object.assign(commentsMap, r.comments_map || {});
-    return { id: r.id, name: r.name, tariff: r.tariff, curator: r.curator, status: r.status, startDate: r.start_date, notes: r.notes || "", assistant: r.assistant || "", mentor: r.mentor || "", workEmail: r.work_email || "", workPassword: r.work_password || "", resumeUrl: r.resume_url || "", totalApps: r.total_apps || 0, doneApps: r.done_apps || 0 };
+    return { id: r.id, name: r.name, tariff: r.tariff, curator: r.curator, status: r.status, startDate: r.start_date, notes: r.notes || "", assistant: r.assistant || "", mentor: r.mentor || "", workEmail: r.work_email || "", workPassword: r.work_password || "", resumeUrl: r.resume_url || "", totalApps: r.total_apps || 0, doneApps: r.done_apps || 0, archived: r.archived || false, title: r.title || "", location: r.location || "", linkedinUrl: r.linkedin_url || "", telegram: r.telegram || "", week: r.week || 0 };
   });
   return { clients, checkedMap, commentsMap };
 }
