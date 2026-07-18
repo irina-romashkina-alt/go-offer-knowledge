@@ -2288,7 +2288,7 @@ function ClientsView({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useState("active"); // "active" | "archived" | "all"
   const [activePhase, setActivePhase] = useState(null);
   const [checkedMap, setCheckedMap] = useState({});
   const [commentsMap, setCommentsMap] = useState({});
@@ -2394,8 +2394,9 @@ function ClientsView({ currentUser }) {
   var allTariffs = ["Все"].concat(Array.from(new Set(clients.map(function(c) { return c.tariff; }).filter(Boolean))));
 
   var filtered = clients.filter(function(c) {
-    if (!showArchived && c.archived) return false;
-    if (showArchived && !c.archived) return false;
+    if (showArchived === "active" && c.archived) return false;
+    if (showArchived === "archived" && !c.archived) return false;
+    // showArchived === "all" — показываем всех
     var curOk = filterCurator === "Все" || c.curator === filterCurator;
     var stOk = filterStatus === "Все" || c.status === filterStatus;
     var tarOk = filterTariff === "Все" || c.tariff === filterTariff;
@@ -2631,14 +2632,20 @@ function ClientsView({ currentUser }) {
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>Клиенты</h1>
           <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, marginTop: 2 }}>
-            {showArchived ? archivedClients.length + " архивных" : activeClients.length + " активных"} · всего {clients.length}
+            {showArchived === "archived" ? archivedClients.length + " архивных" : showArchived === "all" ? clients.length + " всего" : activeClients.length + " активных"} · всего {clients.length}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={function() { setShowArchived(function(p){return !p;}); }}
-            style={{ fontSize: 12, color: showArchived ? "#A78BFA" : "rgba(255,255,255,0.4)", background: showArchived ? "rgba(167,139,250,0.1)" : "rgba(255,255,255,0.04)", border: "1px solid "+(showArchived?"rgba(167,139,250,0.3)":"rgba(255,255,255,0.08)"), borderRadius: 9, padding: "7px 14px", cursor: "pointer" }}>
-            {showArchived ? "👁 Показать активных" : "📦 Архив (" + archivedClients.length + ")"}
+          <button onClick={function() { setShowArchived(showArchived === "archived" ? "active" : "archived"); }}
+            style={{ fontSize: 12, color: showArchived === "archived" ? "#A78BFA" : "rgba(255,255,255,0.4)", background: showArchived === "archived" ? "rgba(167,139,250,0.1)" : "rgba(255,255,255,0.04)", border: "1px solid "+(showArchived === "archived" ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.08)"), borderRadius: 9, padding: "7px 14px", cursor: "pointer" }}>
+            {showArchived === "archived" ? "👁 Активные" : "📦 Архив (" + archivedClients.length + ")"}
           </button>
+          {(currentUser.role === "admin") && (
+            <button onClick={function() { setShowArchived(showArchived === "all" ? "active" : "all"); }}
+              style={{ fontSize: 12, color: showArchived === "all" ? "#34D399" : "rgba(255,255,255,0.4)", background: showArchived === "all" ? "rgba(52,211,153,0.1)" : "rgba(255,255,255,0.04)", border: "1px solid "+(showArchived === "all" ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.08)"), borderRadius: 9, padding: "7px 14px", cursor: "pointer" }}>
+              🌐 Все ({clients.length})
+            </button>
+          )}
           {canEdit && (
             <button onClick={function() { setShowAdd(function(p){return !p;}); }}
               style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#A78BFA,#7C3AED)", border: "none", borderRadius: 10, padding: "8px 18px", cursor: "pointer" }}>
@@ -2653,7 +2660,7 @@ function ClientsView({ currentUser }) {
       </div>
 
       {/* Воронка */}
-      {!showArchived && (
+      {showArchived === "active" && (
         <div style={{ position: "sticky", top: 0, zIndex: 10, marginBottom: 16, background: "rgba(8,5,22,0.92)", backdropFilter: "blur(12px)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", padding: "12px 16px", overflowX: "auto" }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 10 }}>Воронка</div>
           <div style={{ display: "flex", gap: 6, alignItems: "stretch", minWidth: "max-content" }}>
@@ -2913,7 +2920,7 @@ function ClientsView({ currentUser }) {
       </div>
 
       <div style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.25)", textAlign: "right" }}>
-        Показано: {filtered.length} из {showArchived ? archivedClients.length : activeClients.length}
+        Показано: {filtered.length} из {showArchived === "archived" ? archivedClients.length : showArchived === "all" ? clients.length : activeClients.length}
       </div>
     </div>
   );
