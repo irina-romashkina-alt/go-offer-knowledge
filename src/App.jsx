@@ -2218,6 +2218,12 @@ async function sbSaveClient(client, checkedMap, commentsMap) {
       resume_url: client.resumeUrl || "",
       total_apps: client.totalApps || 0,
       done_apps: client.doneApps || 0,
+      archived: client.archived || false,
+      title: client.title || "",
+      location: client.location || "",
+      linkedin_url: client.linkedinUrl || "",
+      telegram: client.telegram || "",
+      week: client.week || 0,
     })
   });
 }
