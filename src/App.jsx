@@ -3486,6 +3486,209 @@ function MentorView({ currentUser, isCurator }) {
 // 19. АНАЛИТИКА — АДМИНКА
 // ============================================================
 
+async function sbLoadOffers() {
+  var rows = await sbFetch("offers?order=offer_date.desc&select=*");
+  if (!rows) return [];
+  return rows.map(function(r) {
+    return {
+      id: r.id, name: r.name || "", company: r.company || "",
+      title: r.title || "", offerDate: r.offer_date || "",
+      startDate: r.start_date || "", startWorkDate: r.start_work_date || "",
+      salary: r.offer_salary || "", location: r.location || "",
+      telegram: r.telegram || "", linkedin: r.linkedin || "",
+      tariff: r.tariff || "", duration: r.duration || "",
+      interviewLink: r.interview_link || "", otherOffers: r.other_offers || "",
+    };
+  });
+}
+
+// ── РАЗДЕЛ ОФФЕРОВ ─────────────────────────────────────────────────────────────
+function OffersView({ currentUser }) {
+  const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterTariff, setFilterTariff] = useState("Все");
+  const [sortCol, setSortCol] = useState("offerDate");
+  const [sortDir, setSortDir] = useState("desc");
+
+  var now = new Date();
+  const [dateFrom, setDateFrom] = useState("2020-01-01");
+  const [dateTo, setDateTo] = useState(now.toISOString().slice(0,10));
+
+  function load() {
+    sbLoadOffers().then(function(data) {
+      setOffers(data);
+      setLoading(false);
+    }).catch(function() { setLoading(false); });
+  }
+
+  useEffect(function() {
+    load();
+    var interval = setInterval(load, 30000);
+    return function() { clearInterval(interval); };
+  }, []);
+
+  var allTariffs = ["Все"].concat(Array.from(new Set(offers.map(function(o){return o.tariff;}).filter(Boolean))));
+
+  var filtered = offers.filter(function(o) {
+    var dateOk = (!o.offerDate || o.offerDate >= dateFrom) && (!o.offerDate || o.offerDate <= dateTo);
+    var searchOk = search === "" || (o.name||"").toLowerCase().includes(search.toLowerCase()) || (o.company||"").toLowerCase().includes(search.toLowerCase()) || (o.title||"").toLowerCase().includes(search.toLowerCase());
+    var tariffOk = filterTariff === "Все" || o.tariff === filterTariff;
+    return dateOk && searchOk && tariffOk;
+  }).sort(function(a, b) {
+    var va = (a[sortCol]||"").toString();
+    var vb = (b[sortCol]||"").toString();
+    return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+
+  function toggleSort(col) {
+    if (sortCol === col) setSortDir(function(d){return d==="asc"?"desc":"asc";});
+    else { setSortCol(col); setSortDir("desc"); }
+  }
+
+  function SortArrow({ col }) {
+    if (sortCol !== col) return <span style={{color:"rgba(255,255,255,0.2)",fontSize:9}}>↕</span>;
+    return <span style={{color:"#A78BFA",fontSize:9}}>{sortDir==="asc"?"↑":"↓"}</span>;
+  }
+
+  // Статистика
+  var withSalary = filtered.filter(function(o){return o.salary && parseFloat(o.salary.replace(/[^0-9.]/g,""));});
+  var avgSalary = withSalary.length ? Math.round(withSalary.reduce(function(s,o){return s+(parseFloat(o.salary.replace(/[^0-9.]/g,""))||0);},0)/withSalary.length) : null;
+
+  if (loading) return (
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:300,gap:12}}>
+      <div style={{width:20,height:20,border:"2px solid rgba(167,139,250,0.3)",borderTop:"2px solid #A78BFA",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} />
+      <span style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Загружаем офферы...</span>
+    </div>
+  );
+
+  return (
+    <div style={{maxWidth:1200,margin:"0 auto"}}>
+      <div style={{marginBottom:16}}>
+        <h1 style={{fontSize:20,fontWeight:800,color:"#fff"}}>🎉 Офферы</h1>
+        <p style={{color:"rgba(255,255,255,0.35)",fontSize:13,marginTop:2}}>История успехов — {offers.length} офферов</p>
+      </div>
+
+      {/* KPI */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
+        {[
+          {label:"Всего офферов", val:offers.length, color:"#FBBF24", icon:"🎉"},
+          {label:"За период", val:filtered.length, color:"#A78BFA", icon:"📅"},
+          {label:"Средняя зп", val:avgSalary?"$"+avgSalary.toLocaleString():"—", color:"#34D399", icon:"💰"},
+          {label:"С интервью", val:filtered.filter(function(o){return o.interviewLink;}).length, color:"#67E8F9", icon:"🎬"},
+        ].map(function(k){
+          return <div key={k.label} style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"14px 16px"}}>
+            <div style={{fontSize:18,marginBottom:5}}>{k.icon}</div>
+            <div style={{fontSize:22,fontWeight:900,color:k.color}}>{k.val}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginTop:3}}>{k.label}</div>
+          </div>;
+        })}
+      </div>
+
+      {/* Фильтры */}
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:10,padding:"7px 12px"}}>
+          <span style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>с</span>
+          <input type="date" value={dateFrom} onChange={function(e){setDateFrom(e.target.value);}}
+            style={{background:"transparent",border:"none",color:"#fff",fontSize:12,fontWeight:600,outline:"none",fontFamily:"inherit",cursor:"pointer"}} />
+          <span style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>по</span>
+          <input type="date" value={dateTo} onChange={function(e){setDateTo(e.target.value);}}
+            style={{background:"transparent",border:"none",color:"#fff",fontSize:12,fontWeight:600,outline:"none",fontFamily:"inherit",cursor:"pointer"}} />
+        </div>
+        {[
+          {label:"Месяц", from:new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10)},
+          {label:"Квартал", from:new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1).toISOString().slice(0,10)},
+          {label:"Год", from:new Date(now.getFullYear(),0,1).toISOString().slice(0,10)},
+          {label:"Всё", from:"2020-01-01"},
+        ].map(function(p){
+          return <button key={p.label} onClick={function(){setDateFrom(p.from);setDateTo(now.toISOString().slice(0,10));}}
+            style={{fontSize:11,color:"rgba(255,255,255,0.5)",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"5px 10px",cursor:"pointer"}}>{p.label}</button>;
+        })}
+        <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:9,padding:"6px 10px",flex:1,minWidth:160}}>
+          <span style={{fontSize:12,color:"rgba(255,255,255,0.2)"}}>🔍</span>
+          <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Поиск по имени, компании, тайтлу..."
+            style={{background:"none",border:"none",outline:"none",fontSize:12,color:"#fff",width:"100%",fontFamily:"inherit"}} />
+        </div>
+        <select value={filterTariff} onChange={function(e){setFilterTariff(e.target.value);}}
+          style={{background:"#1a1535",border:"1px solid rgba(255,255,255,0.1)",borderRadius:9,padding:"7px 12px",fontSize:12,color:"rgba(255,255,255,0.7)",outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
+          {allTariffs.map(function(t){return <option key={t} value={t}>{t==="Все"?"Все тарифы":t}</option>;})}
+        </select>
+        <button onClick={load} title="Обновить" style={{fontSize:13,color:"rgba(255,255,255,0.4)",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:9,padding:"7px 10px",cursor:"pointer"}}>🔄</button>
+      </div>
+
+      {/* Таблица */}
+      <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,overflow:"hidden"}}>
+        {/* Шапка */}
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1.2fr 1fr 1fr 0.8fr 0.8fr",gap:0,borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)"}}>
+          {[
+            {label:"Имя / Тайтл", col:"name"},
+            {label:"Компания", col:"company"},
+            {label:"Тариф / Длит.", col:"tariff"},
+            {label:"Дата оффера", col:"offerDate"},
+            {label:"Выход на работу", col:"startWorkDate"},
+            {label:"Зарплата", col:"salary"},
+            {label:"Локация", col:"location"},
+          ].map(function(h){
+            return <div key={h.col} onClick={function(){toggleSort(h.col);}}
+              style={{padding:"10px 12px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.6px",cursor:"pointer",display:"flex",alignItems:"center",gap:4,userSelect:"none"}}>
+              {h.label} <SortArrow col={h.col} />
+            </div>;
+          })}
+        </div>
+
+        {/* Строки */}
+        {filtered.length === 0 ? (
+          <div style={{textAlign:"center",padding:"40px",color:"rgba(255,255,255,0.25)",fontSize:14}}>Офферов не найдено</div>
+        ) : filtered.map(function(o, idx) {
+          var salaryNum = o.salary ? parseFloat(o.salary.replace(/[^0-9.]/g,"")) : 0;
+          return (
+            <div key={o.id} style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1.2fr 1fr 1fr 0.8fr 0.8fr",gap:0,borderBottom:idx<filtered.length-1?"1px solid rgba(255,255,255,0.04)":"none",background:idx%2===0?"transparent":"rgba(255,255,255,0.01)",transition:"background 0.1s"}}
+              onMouseEnter={function(e){e.currentTarget.style.background="rgba(251,191,36,0.05)";}}
+              onMouseLeave={function(e){e.currentTarget.style.background=idx%2===0?"transparent":"rgba(255,255,255,0.01)";}}>
+              <div style={{padding:"11px 12px"}}>
+                <div style={{fontSize:13,fontWeight:600,color:"#fff"}}>{o.name}</div>
+                {o.title && <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:1}}>{o.title}</div>}
+                <div style={{display:"flex",gap:8,marginTop:4}}>
+                  {o.telegram && <span style={{fontSize:10,color:"#67E8F9"}}>{o.telegram}</span>}
+                  {o.interviewLink && <a href={o.interviewLink} target="_blank" rel="noreferrer" style={{fontSize:10,color:"#FBBF24",textDecoration:"none"}}>🎬 интервью</a>}
+                </div>
+              </div>
+              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:12,fontWeight:600,color:"#fff"}}>{o.company||"—"}</div>
+                  {o.otherOffers && <div style={{fontSize:10,color:"rgba(255,255,255,0.3)",marginTop:2}}>+ {o.otherOffers}</div>}
+                </div>
+              </div>
+              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+                <div>
+                  <span style={{fontSize:11,color:"#A78BFA",background:"rgba(167,139,250,0.1)",border:"1px solid rgba(167,139,250,0.2)",padding:"2px 7px",borderRadius:20}}>{o.tariff||"—"}</span>
+                  {o.duration && <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginTop:3}}>⏱ {o.duration}</div>}
+                </div>
+              </div>
+              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+                <span style={{fontSize:12,color:o.offerDate?"#FBBF24":"rgba(255,255,255,0.25)"}}>{o.offerDate||"—"}</span>
+              </div>
+              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+                <span style={{fontSize:12,color:o.startWorkDate?"#34D399":"rgba(255,255,255,0.25)"}}>{o.startWorkDate||"—"}</span>
+              </div>
+              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+                <span style={{fontSize:12,fontWeight:700,color:salaryNum>150000?"#34D399":salaryNum>100000?"#FBBF24":salaryNum>0?"rgba(255,255,255,0.7)":"rgba(255,255,255,0.25)"}}>{o.salary||"—"}</span>
+              </div>
+              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+                <span style={{fontSize:11,color:"rgba(255,255,255,0.45)"}}>{o.location||"—"}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{marginTop:8,fontSize:12,color:"rgba(255,255,255,0.25)",textAlign:"right"}}>
+        Показано: {filtered.length} из {offers.length}
+      </div>
+    </div>
+  );
+}
+
 function AnalyticsView({ currentUser }) {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -4239,6 +4442,7 @@ export default function App() {
     { id: "guide",          label: "Гайд",               icon: "🗺️" },
     { id: "checklist",      label: "Чеклист",             icon: "✅" },
     { id: "clients",        label: "Клиенты",             icon: "👥" },
+    { id: "offers_view",    label: "Офферы",              icon: "🎉" },
     { id: "analytics",      label: "Аналитика",           icon: "📊" },
     { id: "ai",             label: "AI-помощник",         icon: "✨" },
     { id: "links",          label: "Полезные ссылки",     icon: "🔗" },
@@ -4385,6 +4589,7 @@ export default function App() {
 
         <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 10px" : "20px 24px", paddingBottom: isMobile ? "80px" : "20px" }} onClick={function() { setNotif(false); setUserMenu(false); }}>
           {activeNav === "clients" ? <ClientsView currentUser={user} /> : null}
+          {activeNav === "offers_view" ? <OffersView currentUser={user} /> : null}
           {activeNav === "analytics" ? <AnalyticsView currentUser={user} /> : null}
           {activeNav === "mentor_clients" ? <MentorView currentUser={user} isCurator={false} /> : null}
           {activeNav === "mentor_role" ? <MentorRoleView /> : null}
