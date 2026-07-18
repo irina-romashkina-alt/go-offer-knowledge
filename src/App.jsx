@@ -4568,6 +4568,7 @@ export default function App() {
     { id: "links",          label: "Полезные ссылки",    icon: "🔗" },
   ] : isAnalytics ? [
     { id: "analytics",      label: "Аналитика",          icon: "📊" },
+    { id: "offers_view",    label: "Офферы",             icon: "🎉" },
     { id: "clients",        label: "Клиенты",            icon: "👥" },
   ] : [
     { id: "company",        label: "Компания",          icon: "🏢" },
