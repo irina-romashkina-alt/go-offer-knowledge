@@ -2274,6 +2274,7 @@ const STAFF = [
   { email: "assistant2@go-offer.us",         name: "Ассистент 2",       role: "assistant" },
   // Sales
   { email: "sales@go-offer.us",             name: "Sales Team",         role: "sales" },
+  { email: "eugenevoroshko@go-offer.us",    name: "Евгений Ворошко",    role: "sales" },
   // Маркетинг
   { email: "marketing@go-offer.us",         name: "Marketing Team",     role: "marketing" },
 ];
@@ -4389,22 +4390,195 @@ function AnalyticsView({ currentUser }) {
 // ============================================================
 
 function SalesView({ currentUser }) {
+  const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [search, setSearch] = useState("");
+
+  function load() {
+    // Загружаем только "Вышел на работу" — для сбора Success Fee
+    sbFetch("offers?offer_status=eq.Вышел на работу&order=offer_date.desc&select=*").then(function(rows) {
+      if (rows) setOffers(rows.map(function(r) {
+        return {
+          id: r.id, name: r.name || "", company: r.company || "",
+          title: r.title || "", offerDate: r.offer_date || "",
+          startWorkDate: r.start_work_date || "", salary: r.offer_salary || "",
+          location: r.location || "", telegram: r.telegram || "",
+          tariff: r.tariff || "", curator: r.curator || "",
+          comment: r.comment || "", sfCollected: r.sf_collected || false,
+          sfComment: r.sf_comment || "",
+        };
+      }));
+      setLoading(false);
+    }).catch(function() { setLoading(false); });
+  }
+
+  useEffect(function() {
+    load();
+    var interval = setInterval(load, 30000);
+    return function() { clearInterval(interval); };
+  }, []);
+
+  function toggleSF(o) {
+    var newVal = !o.sfCollected;
+    sbFetch("offers?id=eq." + encodeURIComponent(o.id), {
+      method: "PATCH",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ sf_collected: newVal })
+    });
+    setOffers(function(p) { return p.map(function(x) { return x.id === o.id ? Object.assign({}, x, { sfCollected: newVal }) : x; }); });
+  }
+
+  function saveComment(o) {
+    sbFetch("offers?id=eq." + encodeURIComponent(o.id), {
+      method: "PATCH",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ sf_comment: commentDraft })
+    });
+    setOffers(function(p) { return p.map(function(x) { return x.id === o.id ? Object.assign({}, x, { sfComment: commentDraft }) : x; }); });
+    setEditingId(null);
+  }
+
+  var filtered = offers.filter(function(o) {
+    return search === "" || (o.name||"").toLowerCase().includes(search.toLowerCase()) || (o.company||"").toLowerCase().includes(search.toLowerCase());
+  });
+
+  var collected = offers.filter(function(o) { return o.sfCollected; });
+  var pending = offers.filter(function(o) { return !o.sfCollected; });
+
+  function calcSF(o) {
+    var SF_RATES = { "take-all-plus":0.05,"TAKE ALL PLUS 01/26":0.05,"VIP 01/26":0.06,"VIP OLD":0.06,"CUSTOM PACK":0.04 };
+    var sal = parseFloat((o.salary||"").replace(/[^0-9.]/g,"")) || 120000;
+    var rate = 0.04;
+    Object.keys(SF_RATES).forEach(function(k) { if ((o.tariff||"").includes(k)) rate = SF_RATES[k]; });
+    if ((o.tariff||"").includes("VIP")) rate = 0.06;
+    if ((o.tariff||"").includes("PLUS")) rate = 0.05;
+    return Math.round(sal * rate);
+  }
+
+  var totalSF = collected.reduce(function(s,o) { return s + calcSF(o); }, 0);
+  var pendingSF = pending.reduce(function(s,o) { return s + calcSF(o); }, 0);
+
+  if (loading) return (
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:300,gap:12}}>
+      <div style={{width:20,height:20,border:"2px solid rgba(251,191,36,0.3)",borderTop:"2px solid #FBBF24",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} />
+      <span style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Загружаем офферы...</span>
+    </div>
+  );
+
   return (
-    <div style={{ maxWidth: 700, padding: "40px 0" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>💼</div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Кабинет Sales</div>
-        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>
-          Здесь будут: офферы клиентов, воронка продаж, контакты для Success Fee.<br/>
-          Раздел в разработке — скоро появится!
+    <div style={{maxWidth:1100,margin:"0 auto"}}>
+      <div style={{marginBottom:20}}>
+        <h1 style={{fontSize:20,fontWeight:800,color:"#fff"}}>💼 Sales — Сбор Success Fee</h1>
+        <p style={{color:"rgba(255,255,255,0.35)",fontSize:13,marginTop:3}}>Клиенты вышедшие на работу · {offers.length} человек</p>
+      </div>
+
+      {/* KPI */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}}>
+        {[
+          {label:"Вышло на работу", val:offers.length, color:"#34D399", icon:"✅"},
+          {label:"SF собран", val:collected.length, color:"#FBBF24", icon:"💰"},
+          {label:"SF не собран", val:pending.length, color:"#F87171", icon:"⏳"},
+          {label:"Ожидаем SF", val:"$"+pendingSF.toLocaleString(), color:"#A78BFA", icon:"📈"},
+        ].map(function(k){
+          return <div key={k.label} style={{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"14px 16px"}}>
+            <div style={{fontSize:18,marginBottom:5}}>{k.icon}</div>
+            <div style={{fontSize:22,fontWeight:900,color:k.color}}>{k.val}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginTop:3}}>{k.label}</div>
+          </div>;
+        })}
+      </div>
+
+      {/* Поиск */}
+      <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:9,padding:"7px 12px",flex:1}}>
+          <span style={{fontSize:12,color:"rgba(255,255,255,0.2)"}}>🔍</span>
+          <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Поиск по имени или компании..."
+            style={{background:"none",border:"none",outline:"none",fontSize:13,color:"#fff",width:"100%",fontFamily:"inherit"}} />
         </div>
-        <div style={{ marginTop: 24, display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 12, padding: "10px 20px", fontSize: 13, color: "#FBBF24" }}>
-          🚧 Этап 2 — в разработке
+        <button onClick={load} style={{fontSize:13,color:"rgba(255,255,255,0.4)",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:9,padding:"7px 10px",cursor:"pointer"}}>🔄</button>
+      </div>
+
+      {/* Таблица */}
+      <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 0.8fr 0.8fr 0.8fr 2fr 80px",gap:0,borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)"}}>
+          {["Имя / Telegram","Компания / Тайтл","Тариф","Дата оффера","Выход","Комментарий SF","SF собран"].map(function(h){
+            return <div key={h} style={{padding:"10px 12px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.5px"}}>{h}</div>;
+          })}
         </div>
+
+        {filtered.length === 0 ? (
+          <div style={{textAlign:"center",padding:"40px",color:"rgba(255,255,255,0.25)",fontSize:14}}>Нет данных</div>
+        ) : filtered.map(function(o, idx) {
+          var sf = calcSF(o);
+          var isEditing = editingId === o.id;
+          return (
+            <div key={o.id} style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 0.8fr 0.8fr 0.8fr 2fr 80px",gap:0,borderBottom:idx<filtered.length-1?"1px solid rgba(255,255,255,0.04)":"none",background:o.sfCollected?"rgba(52,211,153,0.04)":idx%2===0?"transparent":"rgba(255,255,255,0.01)"}}
+              onMouseEnter={function(e){if(!o.sfCollected)e.currentTarget.style.background="rgba(251,191,36,0.04)";}}
+              onMouseLeave={function(e){e.currentTarget.style.background=o.sfCollected?"rgba(52,211,153,0.04)":idx%2===0?"transparent":"rgba(255,255,255,0.01)";}}>
+
+              <div style={{padding:"11px 12px"}}>
+                <div style={{fontSize:13,fontWeight:600,color:"#fff"}}>{o.name}</div>
+                {o.telegram && <div style={{fontSize:11,color:"#67E8F9",marginTop:2}}>{o.telegram}</div>}
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:1}}>👤 {o.curator||"—"}</div>
+              </div>
+
+              <div style={{padding:"11px 12px"}}>
+                <div style={{fontSize:12,fontWeight:600,color:"#fff"}}>{o.company||"—"}</div>
+                {o.title && <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:1}}>{o.title}</div>}
+                {o.location && <div style={{fontSize:10,color:"rgba(255,255,255,0.3)"}}>📍 {o.location}</div>}
+              </div>
+
+              <div style={{padding:"11px 12px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+                <span style={{fontSize:10,color:"#A78BFA",background:"rgba(167,139,250,0.1)",border:"1px solid rgba(167,139,250,0.2)",padding:"2px 6px",borderRadius:20,display:"inline-block"}}>{o.tariff||"—"}</span>
+                <div style={{fontSize:11,fontWeight:700,color:"#FBBF24",marginTop:4}}>${sf.toLocaleString()}</div>
+              </div>
+
+              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+                <span style={{fontSize:12,color:"rgba(255,255,255,0.5)"}}>{o.offerDate||"—"}</span>
+              </div>
+
+              <div style={{padding:"11px 12px",display:"flex",alignItems:"center"}}>
+                <span style={{fontSize:12,color:"#34D399",fontWeight:600}}>{o.startWorkDate||"—"}</span>
+              </div>
+
+              <div style={{padding:"11px 12px"}}>
+                {isEditing ? (
+                  <div>
+                    <textarea value={commentDraft} onChange={function(e){setCommentDraft(e.target.value);}} placeholder="Комментарий по SF..."
+                      style={{width:"100%",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(251,191,36,0.4)",borderRadius:6,padding:"5px 8px",fontSize:11,color:"#fff",outline:"none",fontFamily:"inherit",resize:"vertical",minHeight:50}} />
+                    <div style={{display:"flex",gap:6,marginTop:4}}>
+                      <button onClick={function(){saveComment(o);}} style={{fontSize:11,fontWeight:700,color:"#fff",background:"#FBBF24",border:"none",borderRadius:5,padding:"3px 10px",cursor:"pointer"}}>Сохранить</button>
+                      <button onClick={function(){setEditingId(null);}} style={{fontSize:11,color:"rgba(255,255,255,0.4)",background:"rgba(255,255,255,0.05)",border:"none",borderRadius:5,padding:"3px 8px",cursor:"pointer"}}>Отмена</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{display:"flex",alignItems:"flex-start",gap:6}}>
+                    <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",flex:1,lineHeight:1.5}}>{o.sfComment||<span style={{color:"rgba(255,255,255,0.2)",fontStyle:"italic"}}>нет комментария</span>}</span>
+                    <button onClick={function(){setEditingId(o.id);setCommentDraft(o.sfComment||"");}} style={{fontSize:10,color:"rgba(255,255,255,0.25)",background:"none",border:"none",cursor:"pointer",flexShrink:0}}>✏️</button>
+                  </div>
+                )}
+              </div>
+
+              <div style={{padding:"11px 12px",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <button onClick={function(){toggleSF(o);}} title={o.sfCollected?"Снять отметку":"Отметить как собранный"}
+                  style={{width:28,height:28,borderRadius:8,border:"2px solid "+(o.sfCollected?"#34D399":"rgba(255,255,255,0.2)"),background:o.sfCollected?"#34D399":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,transition:"all 0.15s"}}>
+                  {o.sfCollected && <span style={{color:"#fff",fontWeight:700}}>✓</span>}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{marginTop:8,fontSize:12,color:"rgba(255,255,255,0.25)",textAlign:"right"}}>
+        Собрано SF: <span style={{color:"#34D399",fontWeight:700}}>${totalSF.toLocaleString()}</span> · Ожидаем: <span style={{color:"#FBBF24",fontWeight:700}}>${pendingSF.toLocaleString()}</span>
       </div>
     </div>
   );
 }
+
 
 function MarketingView({ currentUser }) {
   return (
