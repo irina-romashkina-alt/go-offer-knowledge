@@ -1433,6 +1433,47 @@ function GuideView() {
 // 14. ПОЛЕЗНЫЕ ССЫЛКИ
 // ============================================================
 
+// URL задеплоенного инструмента Ани (go-offer-mentor-resume-tool).
+// Замени на реальный адрес из Vercel (Settings → Domains в проекте на vercel.com,
+// либо ссылка "go-offer-mentor-resume-tool.vercel..." в сайдбаре README на GitHub).
+const MENTOR_RESUME_TOOL_URL = "https://go-offer-mentor-resume-tool.vercel.app/";
+
+function ResumeToolView() {
+  var hasUrl = MENTOR_RESUME_TOOL_URL.indexOf("REPLACE-WITH-VERCEL-URL") === -1;
+
+  if (!hasUrl) {
+    return (
+      <div style={{ maxWidth: 640, margin: "60px auto", textAlign: "center" }}>
+        <div style={{ fontSize: 32, marginBottom: 10 }}>🛠️</div>
+        <h1 style={{ fontSize: 19, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Инструмент не подключён</h1>
+        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, lineHeight: 1.6 }}>
+          Укажи адрес задеплоенного инструмента Ани в константе <code style={{ color: "#A78BFA" }}>MENTOR_RESUME_TOOL_URL</code> в начале файла App.jsx.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div>
+          <h1 style={{ fontSize: 19, fontWeight: 800, color: "#fff" }}>Резюме-инструмент</h1>
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, marginTop: 2 }}>AI-разбор резюме, стратегия и офферы клиента</p>
+        </div>
+        <a href={MENTOR_RESUME_TOOL_URL} target="_blank" rel="noopener noreferrer"
+          style={{ fontSize: 12, fontWeight: 600, color: "#A78BFA", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 8, padding: "6px 12px", textDecoration: "none", whiteSpace: "nowrap" }}>
+          Открыть в новой вкладке ↗
+        </a>
+      </div>
+      <iframe
+        src={MENTOR_RESUME_TOOL_URL}
+        title="Резюме-инструмент Ани"
+        style={{ flex: 1, minHeight: 600, width: "100%", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, background: "#fff" }}
+      />
+    </div>
+  );
+}
+
 function LinksView() {
   const [activeTag, setActiveTag] = useState("Все");
   const [search, setSearch] = useState("");
@@ -4727,7 +4768,7 @@ export default function App() {
     company: "Компания", curator: "Роль куратора", knowledge: "База знаний",
     tariffs: "Тарифы и продукты", guide: "Гайд", checklist: "Чеклист",
     clients: "Клиенты", analytics: "Аналитика", ai: "AI-помощник", links: "Полезные ссылки",
-    mentor_role: "Роль ментора", mentor_clients: "Мои клиенты",
+    mentor_role: "Роль ментора", mentor_clients: "Мои клиенты", resume_tool: "Резюме-инструмент",
   };
 
   var NAV = isMentor ? [
@@ -4738,6 +4779,7 @@ export default function App() {
     { id: "guide",          label: "Гайд",               icon: "🗺️" },
     { id: "checklist",      label: "Чек-лист сессий",    icon: "✅" },
     { id: "mentor_clients", label: "Клиенты",            icon: "👥" },
+    { id: "resume_tool",    label: "Резюме-инструмент",  icon: "📄" },
     { id: "ai",             label: "AI-помощник",        icon: "✨" },
     { id: "links",          label: "Полезные ссылки",    icon: "🔗" },
   ] : isAnalytics ? [
@@ -4903,6 +4945,7 @@ export default function App() {
           {activeNav === "analytics" ? <AnalyticsView currentUser={user} /> : null}
           {activeNav === "mentor_clients" ? <MentorView currentUser={user} isCurator={false} /> : null}
           {activeNav === "mentor_role" ? <MentorRoleView /> : null}
+          {activeNav === "resume_tool" ? <ResumeToolView /> : null}
           {activeNav === "checklist" ? (isMentor ? <MentorScheduleView currentUser={user} /> : <ChecklistView />) : null}
           {activeNav === "company" ? <CompanyView /> : null}
           {activeNav === "curator" ? <CuratorRoleView /> : null}
